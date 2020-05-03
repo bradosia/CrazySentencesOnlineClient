@@ -23,6 +23,17 @@
 #include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+/* boost 1.72.0
+ * License: Boost Software License (similar to BSD and MIT)
+ */
+#include "boost/filesystem.hpp"
+#include "boost/dll/runtime_symbol_info.hpp"
+
+/* SDL 2.0.12
+ * License: MIT
+ */
+#include <SDL2/SDL_syswm.h>
+
 /* Ogre3D 1.12.2
  * License: MIT
  */
@@ -69,6 +80,7 @@ private:
    */
   SDL_Window *window;
   bool* mainLoopFlag;
+  bool show_demo_window, show_another_window;
   // Our state
   ImVec4 clear_color;
   // Decide GL+GLSL versions

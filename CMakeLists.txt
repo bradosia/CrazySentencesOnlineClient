@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 set(lib_base_name CrazySentencesOnlineClient)
 project(${lib_base_name} VERSION 1.0.0 LANGUAGES CXX)
+set(RELEASE_DIR "${CMAKE_BINARY_DIR}/${lib_base_name}/")
 
 # Configurable Options
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -22,7 +23,6 @@ set(INCLUDE_DIRECTORIES
   third_party/Settings-Manager/include/
   third_party/OIS-1.5/includes/
   src/modules
-  ../
 )
 
 set(LINK_DIRECTORIES
@@ -35,6 +35,7 @@ set(LINK_DIRECTORIES
 
 # MODULES
 add_subdirectory(src/modules/)
+add_subdirectory(third_party/imgui/)
 
 # Set up source files
 set(SOURCES
@@ -53,15 +54,19 @@ set(HEADERS
 
 set(SHARED_COMPILE_DEFINITIONS
   -DSHARED_LIBRARY
+  #-DGLEW_STATIC
 )
 
 set(STATIC_COMPILE_DEFINITIONS
   -DSTATIC_LIBRARY
+  #-DGLEW_STATIC
 )
 
 set(LIBRARIES ${LIBRARIES}
     OgreMain
     imgui
+    SDL2main
+    SDL2
 
     # Boost
     Boost::system
@@ -70,6 +75,10 @@ set(LIBRARIES ${LIBRARIES}
 
 if(WIN32)
     set(LIBRARIES ${LIBRARIES}
+        #OgreGLSupport
+        glew32
+        opengl32
+
         # Windows Libraries
         stdc++
         gcc
@@ -94,6 +103,10 @@ if(WIN32)
     )
 elseif(UNIX)
     set(LIBRARIES ${LIBRARIES}
+        #OgreGLSupport
+        GLEW
+        GL
+
         # Unix Libraries
         stdc++
         gcc
@@ -175,18 +188,17 @@ if(BUILD_STATIC_LIBS)
 endif()
 
 # Post build
-if(BUILD_SHARED_LIBS AND PARENT_RELEASE_DIR)
+if(BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${lib_shared_name} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${PARENT_RELEASE_DIR}/modules/"
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_shared_name}> "${PARENT_RELEASE_DIR}/modules/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_shared_name}> "${RELEASE_DIR}/modules/"
         # Make a release directory without all the cmake extras.
         # This directory can easily be archived and distributed.
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/${application_name}/"
         # Create release sub-folders
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/fonts/"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
-        COMMAND ${CMAKE_COMMAND} -E copy "${PROJECT_SOURCE_DIR}/resources/settings.json" "${RELEASE_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/fonts/" "${RELEASE_DIR}/fonts/"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/" "${RELEASE_DIR}"
     )
 endif()
 
@@ -222,6 +234,12 @@ target_include_directories(example PUBLIC
 )
 target_link_libraries(example PUBLIC
     ${lib_name}
-    SDL2main
-    SDL2
+    #SDL2main
+    #SDL2
+)
+
+add_custom_command(TARGET example POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:example> "${RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/lib/windows/" "${RELEASE_DIR}/"
 )

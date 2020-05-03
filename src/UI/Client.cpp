@@ -16,6 +16,8 @@ namespace CSO {
 
 ClientWidget::ClientWidget() {
   std::cout << "CSO::ClientWidget::ClientWidget()" << std::endl;
+  show_demo_window = true;
+  show_another_window = false;
 };
 ClientWidget::~ClientWidget() {
   // Cleanup
@@ -26,6 +28,11 @@ ClientWidget::~ClientWidget() {
 
 bool ClientWidget::initGraphics(SDL_Window *window_) {
   window = window_;
+  int windowWidthInt, windowHeightInt;
+  SDL_GetWindowSize(window, &windowWidthInt, &windowHeightInt);
+  unsigned int windowWidth = static_cast<unsigned int>(windowWidthInt);
+  unsigned int windowHeight = static_cast<unsigned int>(windowHeightInt);
+
   std::cout << "ClientWidget::initGraphics" << std::endl;
   // Ogre Initialize
   root =
@@ -34,17 +41,17 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   root->installPlugin(new Ogre::GLPlugin);
   // root->installPlugin(new Ogre::GL3PlusPlugin);
 #else
-  root->loadPlugin("RenderSystem_GL");
+  // root->loadPlugin("RenderSystem_GL");
   root->loadPlugin("Codec_STBI");
-  // root->loadPlugin("RenderSystem_GL3Plus");
+  root->loadPlugin("RenderSystem_GL3Plus");
 #endif
 
   const Ogre::RenderSystemList &rsList = root->getAvailableRenderers();
   Ogre::RenderSystem *rs = rsList[0];
 
   Ogre::StringVector renderOrder;
-  renderOrder.push_back("OpenGL");
-  // renderOrder.push_back("OpenGL 3+");
+  // renderOrder.push_back("OpenGL");
+  renderOrder.push_back("OpenGL 3+");
 
   for (auto itr = renderOrder.begin(); itr != renderOrder.end(); itr++) {
     for (auto it = rsList.begin(); it != rsList.end(); it++) {
@@ -75,29 +82,45 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
     params["currentGLContext"] = Ogre::String("false");
   }
 
-  Ogre::String handle =
-      Ogre::StringConverter::toString(size_t(widgetData->winId));
-  unsigned int w = static_cast<unsigned int>(widgetData->displaySizeX);
-  unsigned int h = static_cast<unsigned int>(widgetData->displaySizeY);
+  SDL_SysWMinfo wmInfo;
+  SDL_VERSION(&wmInfo.version);
+  SDL_GetWindowWMInfo(window, &wmInfo);
 
-#if defined(__APPLE__) || defined(__WIN32__)
-  params["externalWindowHandle"] =
-      Ogre::StringConverter::toString((size_t)(widgetData->winId));
-#else
-  /* For __linux__ is this enough?
-   */
-  params["externalWindowHandle"] =
-      Ogre::StringConverter::toString((size_t)(widgetData->winId));
+#if defined(__WIN32__)
+  size_t winHandle = reinterpret_cast<size_t>(wmInfo.info.win.window);
+  params["externalWindowHandle"] = Ogre::StringConverter::toString(winHandle);
+#elif defined(__APPLE__)
+  size_t winHandle = reinterpret_cast<size_t>(wmInfo.info.cocoa.window);
+  params["externalWindowHandle"] = Ogre::StringConverter::toString(winHandle);
+#elif defined(__linux__)
+  size_t winHandle = reinterpret_cast<size_t>(wmInfo.info.x11.window);
+  params["externalWindowHandle"] = Ogre::StringConverter::toString(winHandle);
 #endif
+  params["currentGLContext"] = Ogre::String("True");
+  /* Needed to stop Ogre from doing selectPixelFormat
+   * selectPixelFormat should be done by the window creation library
+   */
+  params["externalGLControl"] = Ogre::String("True");
 
 #if defined(__APPLE__)
   params["macAPI"] = "cocoa";
   params["macAPICocoaUseNSView"] = "true";
 #endif
 
-  Ogre::String name = "RenderWindow #" + handle;
-  // required for texture manager
-  root->createRenderWindow(name, w, h, false, &params);
+  Ogre::String name = "RenderWindow #" + std::to_string(winHandle);
+  Ogre::RenderWindow *renderWindow;
+  try {
+    renderWindow = root->createRenderWindow(name, windowWidth, windowHeight,
+                                            false, &params);
+  } catch (Ogre::RenderingAPIException e) {
+    std::cout << e.getDescription() << std::endl;
+    std::cout << e.what() << std::endl;
+    std::cout << "file: " << e.getFile() << ", function: " << e.getSource()
+              << ", line: " << e.getLine() << std::endl;
+    return false;
+  }
+
+  renderWindow->setVisible(true);
 
   Ogre::ResourceGroupManager::getSingleton().createResourceGroup("g1");
 // Initialize OpenGL loader
@@ -133,7 +156,8 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   setStyle1();
 
   // Setup Platform/Renderer bindings
-  ImGui_ImplBookfilerWidget_InitForOpenGL(widgetData);
+  SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
+  ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // Load Fonts
@@ -151,8 +175,17 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   // - Read 'docs/FONTS.txt' for more instructions and details.
   // - Remember that in C/C++ if you want to include a backslash \ in a string
   // literal you need to write a double backslash \\ !
-  fontArialTitle = io.Fonts->AddFontFromFileTTF("fonts/arial.ttf", 22);
-  fontArialText = io.Fonts->AddFontFromFileTTF("fonts/arial.ttf", 12);
+  boost::filesystem::path programPath = boost::dll::program_location();
+  std::cout << "programPath: " << programPath << std::endl;
+  boost::filesystem::path fontPath =
+      programPath.parent_path() / "fonts/arial.ttf";
+  std::cout << "fontPath: " << fontPath << std::endl;
+  if (boost::filesystem::is_regular_file(fontPath)) {
+    std::cout << "fontPath FOUND!: " << fontPath << std::endl;
+    fontArialTitle =
+        io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 22);
+    fontArialText = io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 12);
+  }
 
   // Our state
   clear_color = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
@@ -160,88 +193,94 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 }
 
 bool ClientWidget::render() {
+  ImGuiIO &io = ImGui::GetIO();
+
   // Start the Dear ImGui frame
   ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplBookfilerWidget_NewFrame(widgetData);
+  ImGui_ImplSDL2_NewFrame(window);
   ImGui::NewFrame();
 
-  ImGuiIO &io = ImGui::GetIO();
-#if HOCR_EDIT_MODULE_MAIN_WIDGET_RENDER_1_DEBUG
-  std::cout << "w=" << widgetData->displaySizeX
-            << " h=" << widgetData->displaySizeY << std::endl;
-#endif
+  // 1. Show the big demo window (Most of the sample code is in
+  // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
+  // ImGui!).
+  if (show_demo_window)
+    ImGui::ShowDemoWindow(&show_demo_window);
 
-  io.FontGlobalScale = 1;
-  ImGui::SetNextWindowPos(ImVec2(0, 0), 0);
-  ImGui::SetNextWindowSize(
-      ImVec2(widgetData->displaySizeX, widgetData->displaySizeY), 0);
-  ImGui::Begin("Hello, world!", new bool(false),
-               ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
-                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                   ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBackground);
-  ImDrawList *list = ImGui::GetWindowDrawList();
+  // 2. Show a simple window that we create ourselves. We use a Begin/End pair
+  // to created a named window.
+  {
+    static float f = 0.0f;
+    static int counter = 0;
 
-  /* Draw the image
-   */
-  float scaleFactor = 1;
-  if (glID) {
-    if (image_pixmap->width > widgetData->displaySizeX) {
-      scaleFactor = (float)widgetData->displaySizeX / image_pixmap->width;
-    }
-    ImGui::Image((void *)(intptr_t)glID,
-                 ImVec2(image_pixmap->width * scaleFactor,
-                        image_pixmap->height * scaleFactor));
+    ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and
+                                   // append into it.
+
+    ImGui::Text("This is some useful text."); // Display some text (you can use
+                                              // a format strings too)
+    ImGui::Checkbox(
+        "Demo Window",
+        &show_demo_window); // Edit bools storing our window open/close state
+    ImGui::Checkbox("Another Window", &show_another_window);
+
+    ImGui::SliderFloat("float", &f, 0.0f,
+                       1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
+    ImGui::ColorEdit3(
+        "clear color",
+        (float *)&clear_color); // Edit 3 floats representing a color
+
+    if (ImGui::Button("Button")) // Buttons return true when clicked (most
+                                 // widgets return true when edited/activated)
+      counter++;
+    ImGui::SameLine();
+    ImGui::Text("counter = %d", counter);
+
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+                1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::End();
   }
 
-  if (!glID) {
-    ImGui::PushFont(fontArialTitle);
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
-    ImGui::Text("hOCR Edit Module\nAdd an image and double click the path in "
-                "the list on the left to begin.");
-    ImGui::PopStyleColor();
-    ImGui::PopFont();
+  // 3. Show another simple window.
+  if (show_another_window) {
+    ImGui::Begin(
+        "Another Window",
+        &show_another_window); // Pass a pointer to our bool variable (the
+                               // window will have a closing button that will
+                               // clear the bool when clicked)
+    ImGui::Text("Hello from another window!");
+    if (ImGui::Button("Close Me"))
+      show_another_window = false;
+    ImGui::End();
   }
-
-  io.FontGlobalScale = scaleFactor * 3;
-  // Top left point of scroll window
-  ImVec2 clip_rect = list->GetClipRectMin();
-  // Current scroll position
-  float scroll_x = ImGui::GetScrollX();
-  float scroll_y = ImGui::GetScrollY();
-  /* overlay text */
-  if (overlayWordList) {
-    ImGui::PushFont(fontArialText);
-    for (auto wordPtr : *overlayWordList) {
-      list->AddRect(ImVec2(wordPtr->x0 * scaleFactor + clip_rect.x - scroll_x,
-                           wordPtr->y0 * scaleFactor + clip_rect.y - scroll_y),
-                    ImVec2(wordPtr->x1 * scaleFactor + clip_rect.x - scroll_x,
-                           wordPtr->y1 * scaleFactor + clip_rect.y - scroll_y),
-                    IM_COL32(0, 0, 0, 120));
-      list->AddText(ImVec2(wordPtr->x0 * scaleFactor + clip_rect.x - scroll_x,
-                           wordPtr->y0 * scaleFactor + clip_rect.y - scroll_y),
-                    IM_COL32(0, 0, 0, 255), wordPtr->value.c_str());
-    }
-    ImGui::PopFont();
-  }
-  io.FontGlobalScale = 1;
-
-  ImGui::End();
 
   // Rendering
   // Internally converts the UI to a draw list
   ImGui::Render();
 
-  glViewport(0, 0, widgetData->displaySizeX, widgetData->displaySizeY);
+  glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
   glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
   glClear(GL_COLOR_BUFFER_BIT);
 
+  SDL_GL_MakeCurrent(window, SDL_GL_GetCurrentContext());
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   return true;
 }
 
-bool ClientWidget::handleEventFromSdl(SDL_Event *) { return true; }
+bool ClientWidget::handleEventFromSdl(SDL_Event *event) {
+  while (SDL_PollEvent(event)) {
+    ImGui_ImplSDL2_ProcessEvent(event);
+    if (event->type == SDL_QUIT)
+      *mainLoopFlag = true;
+    if (event->type == SDL_WINDOWEVENT &&
+        event->window.event == SDL_WINDOWEVENT_CLOSE &&
+        event->window.windowID == SDL_GetWindowID(window))
+      *mainLoopFlag = true;
+  }
+  return true;
+}
 
-void setMainLoopFlag(bool *mainLoopFlag_) { mainLoopFlag = mainLoopFlag_; }
+void ClientWidget::setMainLoopFlag(bool *mainLoopFlag_) {
+  mainLoopFlag = mainLoopFlag_;
+}
 
 void ClientWidget::setStyle1() {
   ImGuiStyle &style = ImGui::GetStyle();

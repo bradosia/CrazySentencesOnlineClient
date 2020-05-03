@@ -32,78 +32,92 @@
 #include "../Module.hpp"
 
 int main(int argc, char *argv[]) {
-  std::shared_ptr<CSO::Client> client = CSO::CsoClientModuleExport.newClient();
+  CSO::ModuleExport CsoClientModuleExport;
+  std::shared_ptr<CSO::Client> client = CsoClientModuleExport.newClient();
+  // std::shared_ptr<CSO::Client> client =
+  // CSO::CsoClientModuleExport.newClient();
   // Screen dimension constants
-  const int SCREEN_WIDTH = 640;
-  const int SCREEN_HEIGHT = 480;
+  const int screenWidth = 640;
+  const int screenHeight = 480;
 
   // The window we'll be rendering to
   SDL_Window *window;
-  SDL_SysWMinfo systemInfo;
 
-  // The surface contained by the window
-  SDL_Surface *screenSurface = NULL;
-
-  // Initialize SDL
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+  // Setup SDL
+  // (Some versions of SDL before <2.0.10 appears to have performance/stalling
+  // issues on a minority of Windows systems, depending on whether
+  // SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version
+  // of SDL is recommended!)
+  if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) !=
+      0) {
     printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-  } else {
-
-    // Create window
-    window = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
-                              SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    if (window == NULL) {
-      printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
-    } else {
-      // Get window surface
-      screenSurface = SDL_GetWindowSurface(window);
-
-      // Fill the surface white
-      SDL_FillRect(screenSurface, NULL,
-                   SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF));
-
-      // Update the surface
-      SDL_UpdateWindowSurface(window);
-
-      // Pass to client
-      client->initGraphics(window);
-
-      // Main loop flag
-      bool quit = false;
-      client->setMainLoopFlag(&quit);
-
-      // Event handler
-      SDL_Event e;
-
-      // While application is running
-      while (!quit) {
-        client->handleEventFromSdl(&e);
-
-        // Handle events on queue
-        while (SDL_PollEvent(&e) != 0) {
-          // User requests quit
-          std::cout << "type" << e.type << std::endl;
-          if (e.type == SDL_QUIT) {
-            quit = true;
-          } else if (e.type == SDL_WINDOWEVENT &&
-                     e.window.event == SDL_WINDOWEVENT_CLOSE) {
-            // multi-window close
-            quit = true;
-          }
-        }
-        // Render
-        client->render();
-        // Update the surface
-        SDL_UpdateWindowSurface(window);
-      }
-    }
+    return -1;
   }
 
-  // Destroy window
-  SDL_DestroyWindow(window);
+// Decide GL+GLSL versions
+#if __APPLE__
+  // GL 3.2 Core + GLSL 150
+  const char *glsl_version = "#version 150";
+  SDL_GL_SetAttribute(
+      SDL_GL_CONTEXT_FLAGS,
+      SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+#else
+  // GL 3.0 + GLSL 130
+  const char *glsl_version = "#version 130";
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
 
-  // Quit SDL subsystems
+  // graphics context
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+  SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
+  // Create window
+  SDL_WindowFlags window_flags = (SDL_WindowFlags)(
+      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+  window = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED, screenWidth, screenHeight,
+                            window_flags);
+  if (window == NULL) {
+    printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+    return -1;
+  }
+
+  // GL and context
+  SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+  SDL_GL_MakeCurrent(window, gl_context);
+  SDL_GL_SetSwapInterval(1); // Enable vsync
+
+  // Pass to client
+  client->initGraphics(window);
+
+  // Main loop flag
+  bool quit = false;
+  client->setMainLoopFlag(&quit);
+
+  // Event handler
+  SDL_Event e;
+
+  // While application is running
+  while (!quit) {
+    // Handle events on queue
+    client->handleEventFromSdl(&e);
+
+    // Render
+    client->render();
+
+    // Update the surface
+    SDL_GL_SwapWindow(window);
+  }
+
+  SDL_GL_DeleteContext(gl_context);
+  SDL_DestroyWindow(window);
   SDL_Quit();
 
   return 0;

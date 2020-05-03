@@ -24,9 +24,7 @@
 /* SDL 2.0.12
  * License: MIT
  */
-#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_syswm.h>
 
 /*
  * CSO = Crazy Sentences Online

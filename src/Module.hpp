@@ -38,7 +38,7 @@
 #include <rapidjson/writer.h>
 
 // Local Project
-#include "/UI/Client.hpp"
+#include "UI/Client.hpp"
 #include "Interface.hpp"
 
 /*
@@ -65,11 +65,6 @@ public:
   /* create a new client */
   std::shared_ptr<Client> newClient();
 };
-
-// Exporting `my_namespace::module` variable with alias name `module`
-// (Has the same effect as `BOOST_DLL_ALIAS(my_namespace::module, module)`)
-extern "C" BOOST_SYMBOL_EXPORT ModuleExport CsoClientModuleExport;
-ModuleExport CsoClientModuleExport;
 
 } // namespace CSO
 

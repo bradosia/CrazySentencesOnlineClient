@@ -16,10 +16,12 @@ set(SOURCES ${SOURCES}
   imgui-1.75/imgui_draw.cpp
   imgui-1.75/imgui_widgets.cpp
   imgui-1.75/examples/imgui_impl_opengl3.cpp
+  imgui-1.75/examples/imgui_impl_sdl.cpp
   #glew-2.1.0/src/glew.c
 
   imgui-1.75/imgui.h
   imgui-1.75/examples/imgui_impl_opengl3.h
+  imgui-1.75/examples/imgui_impl_sdl.h
   #glew-2.1.0/include/GL/glew.h
 )
 
