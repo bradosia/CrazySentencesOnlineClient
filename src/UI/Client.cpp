@@ -14,7 +14,8 @@
  */
 namespace CSO {
 
-ClientWidget::ClientWidget() {
+ClientWidget::ClientWidget()
+    : m_wasLeftPressed(0), m_wasRightPressed(0), m_wasMiddlePressed(0) {
   std::cout << "CSO::ClientWidget::ClientWidget()" << std::endl;
   show_demo_window = true;
   show_another_window = false;
@@ -22,7 +23,7 @@ ClientWidget::ClientWidget() {
 ClientWidget::~ClientWidget() {
   // Cleanup
   ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplSDL2_Shutdown();
+  //ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
 };
 
@@ -35,18 +36,18 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 
   std::cout << "ClientWidget::initGraphics" << std::endl;
   // Ogre Initialize
-  root =
-      new Ogre::Root(Ogre::BLANKSTRING, Ogre::BLANKSTRING, Ogre::BLANKSTRING);
+  ogreRoot = std::make_shared<Ogre::Root>(Ogre::BLANKSTRING, Ogre::BLANKSTRING,
+                                          Ogre::BLANKSTRING);
 #if defined(OGRE_STATIC)
   root->installPlugin(new Ogre::GLPlugin);
   // root->installPlugin(new Ogre::GL3PlusPlugin);
 #else
   // root->loadPlugin("RenderSystem_GL");
-  root->loadPlugin("Codec_STBI");
-  root->loadPlugin("RenderSystem_GL3Plus");
+  ogreRoot->loadPlugin("Codec_STBI");
+  ogreRoot->loadPlugin("RenderSystem_GL3Plus");
 #endif
 
-  const Ogre::RenderSystemList &rsList = root->getAvailableRenderers();
+  const Ogre::RenderSystemList &rsList = ogreRoot->getAvailableRenderers();
   Ogre::RenderSystem *rs = rsList[0];
 
   Ogre::StringVector renderOrder;
@@ -73,8 +74,8 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   }
 
   rs->setConfigOption("Full Screen", "No");
-  root->setRenderSystem(rs);
-  root->initialise(false);
+  ogreRoot->setRenderSystem(rs);
+  ogreRoot->initialise(false);
 
   Ogre::NameValuePairList params;
 
@@ -108,10 +109,9 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 #endif
 
   Ogre::String name = "RenderWindow #" + std::to_string(winHandle);
-  Ogre::RenderWindow *renderWindow;
   try {
-    renderWindow = root->createRenderWindow(name, windowWidth, windowHeight,
-                                            false, &params);
+    renderWindow.reset(ogreRoot->createRenderWindow(
+        name, windowWidth, windowHeight, false, &params));
   } catch (Ogre::RenderingAPIException e) {
     std::cout << e.getDescription() << std::endl;
     std::cout << e.what() << std::endl;
@@ -122,7 +122,6 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 
   renderWindow->setVisible(true);
 
-  Ogre::ResourceGroupManager::getSingleton().createResourceGroup("g1");
 // Initialize OpenGL loader
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
   bool err = gl3wInit() != 0;
@@ -189,6 +188,16 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 
   // Our state
   clear_color = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
+
+  // Shortly after initialising Ogre::Root
+  Ogre::RTShader::ShaderGenerator::initialize();
+  Ogre::RTShader::ShaderGenerator *mShaderGenerator =
+      Ogre::RTShader::ShaderGenerator::getSingletonPtr();
+  mShaderGenerator->setShaderCachePath("ShaderCache/");
+
+  // Select scene
+  menuScene = std::make_shared<SceneMenu>();
+  menuScene->initialize(ogreRoot, renderWindow);
   return true;
 }
 
@@ -200,14 +209,6 @@ bool ClientWidget::render() {
   ImGui_ImplSDL2_NewFrame(window);
   ImGui::NewFrame();
 
-  // 1. Show the big demo window (Most of the sample code is in
-  // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
-  // ImGui!).
-  if (show_demo_window)
-    ImGui::ShowDemoWindow(&show_demo_window);
-
-  // 2. Show a simple window that we create ourselves. We use a Begin/End pair
-  // to created a named window.
   {
     static float f = 0.0f;
     static int counter = 0;
@@ -239,19 +240,6 @@ bool ClientWidget::render() {
     ImGui::End();
   }
 
-  // 3. Show another simple window.
-  if (show_another_window) {
-    ImGui::Begin(
-        "Another Window",
-        &show_another_window); // Pass a pointer to our bool variable (the
-                               // window will have a closing button that will
-                               // clear the bool when clicked)
-    ImGui::Text("Hello from another window!");
-    if (ImGui::Button("Close Me"))
-      show_another_window = false;
-    ImGui::End();
-  }
-
   // Rendering
   // Internally converts the UI to a draw list
   ImGui::Render();
@@ -261,6 +249,16 @@ bool ClientWidget::render() {
   glClear(GL_COLOR_BUFFER_BIT);
 
   SDL_GL_MakeCurrent(window, SDL_GL_GetCurrentContext());
+  // Render ogre first
+  /* terminate called after throwing an instance of
+   * 'Ogre::InvalidStateException'
+   *
+   * Ogre has two build in default materials. BaseWhite (the default used when
+   * the requested material is missing or when a new material is created) and
+   * BaseWhiteNoLighting (same as BaseWhite but with the light turned off).
+   */
+  ogreRoot->renderOneFrame();
+  // Render imgui after
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   return true;
 }
@@ -268,14 +266,97 @@ bool ClientWidget::render() {
 bool ClientWidget::handleEventFromSdl(SDL_Event *event) {
   while (SDL_PollEvent(event)) {
     ImGui_ImplSDL2_ProcessEvent(event);
-    if (event->type == SDL_QUIT)
-      *mainLoopFlag = true;
-    if (event->type == SDL_WINDOWEVENT &&
-        event->window.event == SDL_WINDOWEVENT_CLOSE &&
-        event->window.windowID == SDL_GetWindowID(window))
-      *mainLoopFlag = true;
+    if (event->type == SDL_QUIT) {
+      exitEvent(event);
+    } else if (event->type == SDL_WINDOWEVENT) {
+      if (event->window.event == SDL_WINDOWEVENT_CLOSE &&
+          event->window.windowID == SDL_GetWindowID(window)) {
+        exitEvent(event);
+      } else {
+        resizeEvent(event);
+      }
+    } else if (event->type == SDL_MOUSEBUTTONDOWN) {
+      mousePressEvent(event);
+    } else if (event->type == SDL_MOUSEBUTTONUP) {
+      mouseReleaseEvent(event);
+    } else if (event->type == SDL_MOUSEMOTION) {
+      mouseMoveEvent(event);
+    } else if (event->type == SDL_MOUSEWHEEL) {
+      wheelEvent(event);
+    }
+    // std::cout << "event: " << event->type << std::endl;
   }
   return true;
+}
+
+void ClientWidget::mousePressEvent(SDL_Event *event) {
+  SDL_GetMouseState(&m_mouseX, &m_mouseY);
+  if (event->button.button == SDL_BUTTON_LEFT) {
+    m_wasLeftPressed = true;
+  } else if (event->button.button == SDL_BUTTON_RIGHT) {
+    m_wasRightPressed = true;
+  } else if (event->button.button == SDL_BUTTON_MIDDLE) {
+    m_wasMiddlePressed = true;
+  }
+}
+
+void ClientWidget::mouseReleaseEvent(SDL_Event *event) {
+  if (event->button.button == SDL_BUTTON_LEFT) {
+    m_wasLeftPressed = false;
+  } else if (event->button.button == SDL_BUTTON_RIGHT) {
+    m_wasRightPressed = false;
+  } else if (event->button.button == SDL_BUTTON_MIDDLE) {
+    m_wasMiddlePressed = false;
+  }
+}
+void ClientWidget::mouseMoveEvent(SDL_Event *event) {
+  const int oldX = m_mouseX;
+  const int oldY = m_mouseY;
+  SDL_GetMouseState(&m_mouseX, &m_mouseY);
+
+  if (m_wasLeftPressed) {
+    menuScene->rotateCamera(m_mouseX - oldX, m_mouseY - oldY);
+  }
+  if (m_wasRightPressed) {
+    // menuScene->slideCamera(m_mouseX - oldX, m_mouseY - oldY);
+  }
+  if (m_wasMiddlePressed) {
+    menuScene->moveCamera(m_mouseX - oldX, m_mouseY - oldY);
+  }
+}
+
+void ClientWidget::wheelEvent(SDL_Event *event) {
+  menuScene->zoomInCamera(event->wheel.y);
+}
+
+void ClientWidget::resizeEvent(SDL_Event *event) {
+  if (event->window.event == SDL_WINDOWEVENT_RESIZED) {
+    if (renderWindow) {
+      renderWindow->windowMovedOrResized();
+#if OGRE_VERSION_MAJOR < 2
+      Ogre::Viewport *vp = renderWindow->getViewport(0);
+      if (vp) {
+        vp->getCamera()->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
+                                        Ogre::Real(vp->getActualHeight()));
+      }
+#endif
+    }
+  } else if (event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+    if (renderWindow) {
+      renderWindow->windowMovedOrResized();
+#if OGRE_VERSION_MAJOR < 2
+      Ogre::Viewport *vp = renderWindow->getViewport(0);
+      if (vp) {
+        vp->getCamera()->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
+                                        Ogre::Real(vp->getActualHeight()));
+      }
+#endif
+    }
+  }
+}
+
+void ClientWidget::exitEvent(SDL_Event *event) {
+    *mainLoopFlag = true;
 }
 
 void ClientWidget::setMainLoopFlag(bool *mainLoopFlag_) {

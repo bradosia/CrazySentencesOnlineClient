@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 set(lib_base_name CrazySentencesOnlineClient)
 project(${lib_base_name} VERSION 1.0.0 LANGUAGES CXX)
 set(RELEASE_DIR "${CMAKE_BINARY_DIR}/${lib_base_name}/")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RELEASE_DIR})
 
 # Configurable Options
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -42,6 +43,7 @@ set(SOURCES
   src/Module.cpp
 
   src/UI/Client.cpp
+  src/UI/SceneMenu.cpp
 )
 
 set(HEADERS
@@ -50,6 +52,7 @@ set(HEADERS
   src/core/config.hpp
 
   src/UI/Client.hpp
+  src/UI/SceneMenu.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS
@@ -63,6 +66,7 @@ set(STATIC_COMPILE_DEFINITIONS
 )
 
 set(LIBRARIES ${LIBRARIES}
+    OgreRTShaderSystem
     OgreMain
     imgui
     SDL2main
@@ -198,7 +202,10 @@ if(BUILD_SHARED_LIBS)
         # Create release sub-folders
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/fonts/"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/share/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/ShaderCache/"
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/" "${RELEASE_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/share/" "${RELEASE_DIR}/share"
     )
 endif()
 
@@ -240,6 +247,6 @@ target_link_libraries(example PUBLIC
 
 add_custom_command(TARGET example POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:example> "${RELEASE_DIR}"
+    #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:example> "${RELEASE_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/lib/windows/" "${RELEASE_DIR}/"
 )

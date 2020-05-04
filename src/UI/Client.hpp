@@ -20,14 +20,14 @@
  * License: MIT
  */
 #include <imgui/imgui.h>
-#include <imgui/imgui_impl_sdl.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_impl_sdl.h>
 
 /* boost 1.72.0
  * License: Boost Software License (similar to BSD and MIT)
  */
-#include "boost/filesystem.hpp"
 #include "boost/dll/runtime_symbol_info.hpp"
+#include "boost/filesystem.hpp"
 
 /* SDL 2.0.12
  * License: MIT
@@ -43,9 +43,11 @@
 // basically does #include <GL/glew.h>
 #include <RenderSystems/GL/OgreGLRenderSystem.h>
 #include <RenderSystems/GL/OgreGLTexture.h>
+#include <RTShaderSystem/OgreRTShaderSystem.h>
 
 // Local Project
 #include "../Interface.hpp"
+#include "SceneMenu.hpp"
 
 /*
  * CSO = Crazy Sentences Online
@@ -66,10 +68,15 @@ public:
   // Custom
   void setStyle1();
   void addDrawArrow();
+  void mousePressEvent(SDL_Event *);
+  void mouseReleaseEvent(SDL_Event *);
+  void mouseMoveEvent(SDL_Event *);
+  void wheelEvent(SDL_Event *);
+  void resizeEvent(SDL_Event *);
+  void exitEvent(SDL_Event *);
 
   ImFont *fontArialTitle;
   ImFont *fontArialText;
-  Ogre::Root *root;
 
 protected:
   void initializeGL();
@@ -79,8 +86,14 @@ private:
    * No guarantee window pointer is valid
    */
   SDL_Window *window;
-  bool* mainLoopFlag;
-  bool show_demo_window, show_another_window;
+  bool *mainLoopFlag;
+  bool show_demo_window, show_another_window, m_wasLeftPressed, m_wasRightPressed, m_wasMiddlePressed;
+  int m_mouseX, m_mouseY;
+  // OGRE
+  std::shared_ptr<Ogre::Root> ogreRoot;
+  std::shared_ptr<Ogre::RenderWindow> renderWindow;
+  // SCENE
+  std::shared_ptr<SceneMenu> menuScene;
   // Our state
   ImVec4 clear_color;
   // Decide GL+GLSL versions

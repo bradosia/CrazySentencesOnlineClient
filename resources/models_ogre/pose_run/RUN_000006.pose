@@ -1,0 +1,144 @@
+root hips: -7.14 -47.84 9.347 0.002 -0.237 0.07
+pelvis: 0 0 0 0 0 0
+leg right thigh: -0.9199 23.51 -9.246 0 0 0
+leg right knee: 71.05 -51.31 -37.85 0 0 0
+leg right ankle: -19.61 -3.377 11.1 0 0 0
+leg right toes: 0.1692 -0.04532 0 0 0 0
+leg right ankle adj: -0.6173 -2.304 0.01241 0 0 0
+leg right knee adj: 37.57 -11.9 -4.06 0 0 0
+leg right thigh adj 2: -3.037 -11.42 0.3037 0 0 0
+leg right thigh adj 1: 0 0 0 0 0 0
+leg left thigh: -44.02 24.39 -22.34 0 0 0
+leg left knee: 74.34 72.97 58.56 0 0 0
+leg left ankle: -18.58 13.18 -11.37 0 0 0
+leg left toes: -5.984 -1.609 0.08411 0 0 0
+leg left ankle adj: -1.884 7.051 -0.1161 0 0 0
+leg left knee adj: 40.95 13.45 5.042 0 0 0
+leg left thigh adj 2: 2.997 -11.27 -0.2957 0 0 0
+leg left thigh adj 1: 0 0 0 0 0 0
+spine lower: 24.59 0.5442 2.463 0 0 0
+spine middle: 22.59 -1.475 -7.414 0 0 0
+spine upper: 3.988 -10.92 -11.65 0 0 0
+arm left shoulder 1: -0.1025 0.7587 7.691 0 0 0
+arm left shoulder 2: -37.14 -11.62 19.47 0 0 0
+arm left elbow: -44.22 -103.3 54.38 0 0 0
+arm left wrist: 7.526 -17.64 37.46 0 0 0
+arm left finger 2: 1.033 1.671 3.07 0 0 0
+arm left finger 2a: 7.966 4.723 2.873 0 0 0
+arm left finger 2b: 0.9879 -7.199 -74.39 0 0 0
+arm left finger 2c: 1.192 -6.803 -70.14 0 0 0
+arm left finger 3: 0.4338 0.2821 3.08 0 0 0
+arm left finger 3a: -1.13 0.08988 -25.54 0 0 0
+arm left finger 3b: -0.4699 2.086 -64.61 0 0 0
+arm left finger 3c: -0.3279 2.397 -74.42 0 0 0
+arm left finger 4: 0.8964 0.5253 1.49 0 0 0
+arm left finger 4a: -8.002 2.752 -40.99 0 0 0
+arm left finger 4b: -2.397 10.38 -64.06 0 0 0
+arm left finger 4c: -1.707 11.94 -73.78 0 0 0
+arm left finger 5: 1.284 1.539 -0.5322 0 0 0
+arm left finger 5a: -17.2 5.358 -36.82 0 0 0
+arm left finger 5b: -3.949 20.01 -67.89 0 0 0
+arm left finger 5c: -3.349 21.3 -72.33 0 0 0
+arm left finger 1a: -1.1 9.635 9.792 0 0 0
+arm left finger 1b: 21.38 10.52 1.991 0 0 0
+arm left finger 1c: 2.121 0.9896 0.01832 0 0 0
+arm left wrist adj: 8.601 -8.7 -0.6555 0 0 0
+arm left elbow adj 2: 4.313 -4.325 -0.163 0 0 0
+arm left elbow adj 1: 0 0 0 0 0 0
+arm left shoulder adj 3: 12.17 -12.45 -1.332 0 0 0
+arm left shoulder adj 1: -5.002 -25.87 24.83 0 0 0
+arm left shoulder adj 2: -1.356 -13.15 34.64 0 0 0
+arm right shoulder 1: 0.7041 4.392 -9.091 0 0 0
+arm right shoulder 2: -14.43 0.7364 16.34 0 0 0
+arm right elbow: -43.02 111.1 -59.72 0 0 0
+arm right wrist: -4.867 27.17 -25.58 0 0 0
+arm right finger 1a: 0.9185 0.1646 -13.95 0 0 0
+arm right finger 1b: 21.56 -10.62 -2.028 0 0 0
+arm right finger 1c: 2.583 -1.206 -0.0272 0 0 0
+arm right finger 2: -0.5946 0.1361 -3.09 0 0 0
+arm right finger 2a: 8.104 -4.687 -1.921 0 0 0
+arm right finger 2b: 0.9805 7.212 74.54 0 0 0
+arm right finger 2c: 1.232 6.717 69.24 0 0 0
+arm right finger 3: 0.4343 -0.2813 -3.106 0 0 0
+arm right finger 3a: -1.155 -0.1517 27.51 0 0 0
+arm right finger 3b: -0.4693 -2.088 64.66 0 0 0
+arm right finger 3c: -0.3445 -2.367 73.44 0 0 0
+arm right finger 4: 0.601 -1.246 -1.635 0 0 0
+arm right finger 4a: -8.056 -3.674 46.41 0 0 0
+arm right finger 4b: -2.096 -11.15 68.78 0 0 0
+arm right finger 4c: -1.192 -12.78 79.38 0 0 0
+arm right finger 5: 1.283 -1.541 0.5389 0 0 0
+arm right finger 5a: -17.68 -8.172 42.24 0 0 0
+arm right finger 5b: -3.343 -21.31 72.37 0 0 0
+arm right finger 5c: -2.502 -22.77 77.62 0 0 0
+arm right wrist adj: 3.622 3.629 0.1148 0 0 0
+arm right elbow adj 2: 1.812 1.813 0.02867 0 0 0
+arm right elbow adj 1: 0 0 0 0 0 0
+arm right shoulder adj 3: 2.505 2.507 0.05483 0 0 0
+arm right shoulder adj 1: -10.95 7.067 14.95 0 0 0
+arm right shoulder adj 2: -4.533 4.991 75.02 0 0 0
+head neck lower: -14.42 13.22 -5.983 0 0 0
+head neck upper: 1.764 11.67 2.8 0 0 0
+unusedc faceroot: 0 0 0 0 0 0
+head nostril left: 0 0 0 0 0 0
+head nostril right: 0 0 0 0 0 0
+head lip upper middle: 0 0 0 0 0 0
+head eyebrow center: 0 0 0 0 0 0
+head eyebrow right 1: 0 0 0 0 0 0
+head eyebrow right 2: 0 0 0 0 0 0
+head eyebrow right 3: 0 0 0 0 0 0
+head eyebrow hair right 1: 0 0 0 0 0 0
+head eyebrow hair right 2: 0 0 0 0 0 0
+head eyebrow hair right 3: 0 0 0 0 0 0
+head eyebrow left 1: 0 0 0 0 0 0
+head eyebrow left 2: 0 0 0 0 0 0
+head eyebrow left 3: 0 0 0 0 0 0
+head eyebrow hair left 1: 0 0 0 0 0 0
+head eyebrow hair left 2: 0 0 0 0 0 0
+head eyebrow hair left 3: 0 0 0 0 0 0
+head mouth upper left: 0 0 0 0 0 0
+head mouth upper right: 0 0 0 0 0 0
+head cheek left 2: 0 0 0 0 0 0
+head cheek right 2: 0 0 0 0 0 0
+head eyelid left corner inner: 0 0 0 0 0 0
+head eyelid right corner inner: 0 0 0 0 0 0
+head eyelid left upper: 0 0 0 0 0 0
+head eyelash left upper: 0 0 0 0 0 0
+head eyelid right upper: 0 0 0 0 0 0
+head eyelash right upper: 0 0 0 0 0 0
+head eyelid left lower: 0 0 0 0 0 0
+head eyelash left lower: 0 0 0 0 0 0
+head eyelid right lower: 0 0 0 0 0 0
+head eyelash right lower: 0 0 0 0 0 0
+head eyelid right corner outer: 0 0 0 0 0 0
+head eyelid left corner outer: 0 0 0 0 0 0
+head teeth upper: 0 0 0 0 0 0
+head eyeball left: 0.2806 0 0 0 0.001 0.002
+head eyeball right: 0.2806 0 0 0 0.001 0.002
+head lip upper right 1: 0 0 0 0 0 0
+head lip upper right 2: 0 0 0 0 0 0
+head lip upper left 1: 0 0 0 0 0 0
+head lip upper left 2: 0 0 0 0 0 0
+head lip corner right: 0 0 0 0 0 0
+head lip corner left: 0 0 0 0 0 0
+head cheek right 1: 0 0 0 0 0 0
+head cheek left 1: 0 0 0 0 0 0
+head jaw: 0 0 0 0 0 0
+head teeth lower: 0 0 0 0 0 0
+head lip lower middle: 0 0 0 0 0 0
+head lip lower right 2: 0 0 0 0 0 0
+head lip lower left 2: 0 0 0 0 0 0
+head lip lower left 1: 0 0 0 0 0 0
+head lip lower right 1: 0 0 0 0 0 0
+head mouth right: 0 0 0 0 0 0
+head mouth left: 0 0 0 0 0 0
+head chin: 0 0 0 0 0 0
+head tongue 1: 0 0 0 0 0 0
+head tongue 2: 0 0 0 0 0 0
+head tongue 3: 0 0 0 0 0 0
+head tongue 4: 0 0 0 0 0 0
+head tongue 5: 0 0 0 0 0 0
+breast left 1: 0 0 0 0 0 0
+breast left 2: 0 0 0 0 0 0
+breast right 1: 0 0 0 0 0 0
+breast right 2: 0 0 0 0 0 0
