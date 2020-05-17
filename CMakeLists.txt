@@ -51,17 +51,15 @@ set(SOURCES
 
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
-  src/core/importerMmdVpd.cpp
 )
 
 set(HEADERS
-  src/Module.hpp
-  src/Interface.hpp
-  src/core/config.hpp
+  ${PROJECT_SOURCE_DIR}/src/Module.hpp
+  ${PROJECT_SOURCE_DIR}/src/Interface.hpp
+  ${PROJECT_SOURCE_DIR}/src/core/config.hpp
 
-  src/UI/Client.hpp
-  src/UI/SceneMenu.hpp
-  src/core/importerMmdVpd.hpp
+  ${PROJECT_SOURCE_DIR}/src/UI/Client.hpp
+  ${PROJECT_SOURCE_DIR}/src/UI/SceneMenu.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS
@@ -199,6 +197,15 @@ if(BUILD_STATIC_LIBS)
   target_compile_definitions(${lib_name} PUBLIC ${STATIC_COMPILE_DEFINITIONS})
   # Libraries to link
   target_link_libraries(${lib_name} PUBLIC ${STATIC_LINK_LIBRARIES})
+endif()
+
+# Pre build
+if(BUILD_SHARED_LIBS)
+    add_custom_command(TARGET ${lib_shared_name} PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/include/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/include/${lib_base_name}"
+        COMMAND ${CMAKE_COMMAND} -E copy ${HEADERS} "${PROJECT_SOURCE_DIR}/include/${lib_base_name}"
+    )
 endif()
 
 # Post build

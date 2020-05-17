@@ -9,6 +9,6 @@ target_link_libraries(viewer PUBLIC
 )
 
 add_custom_command(TARGET viewer POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:example> "${RELEASE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:viewer> "${RELEASE_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/lib/windows/" "${RELEASE_DIR}/"
 )
