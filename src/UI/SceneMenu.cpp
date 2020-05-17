@@ -37,31 +37,37 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
 
   bool success = initializeRTShaderSystem(m_sceneManager);
   if (success) {
-    //Ogre::RTShader::ShaderGenerator::getSingletonPtr()->setTargetLanguage("cg");
+    // Ogre::RTShader::ShaderGenerator::getSingletonPtr()->setTargetLanguage("cg");
     Ogre::RTShader::ShaderGenerator::getSingletonPtr()->addSceneManager(
         m_sceneManager);
     mShaderGenerator->addSceneManager(m_sceneManager);
   }
 
   // createCamera()
-  m_camera = m_sceneManager->createCamera("PlayerCam");
+  mCamera = m_sceneManager->createCamera("PlayerCam");
 
-  m_cameraNode = m_sceneManager->getRootSceneNode()->createChildSceneNode( "Camera Node 0" );
-  m_cameraNode = m_cameraNode->createChildSceneNode( "Camera Node" );
-  m_cameraNode->attachObject( m_camera );
-  m_cameraNode->pitch( Ogre::Degree( -45.0f ) );
+  mCameraNode =
+      m_sceneManager->getRootSceneNode()->createChildSceneNode("Camera Node 0");
+  //mCameraNode = mCameraNode->createChildSceneNode("Camera Node");
+  mCameraNode->attachObject(mCamera);
+  mCameraNode->pitch(Ogre::Degree(-45.0f));
+  //mCameraNode->setPosition(Ogre::Vector3(0, 0, 0));
 
-  m_camera->setPosition(Ogre::Vector3(45, 20, 20));
-  m_camera->lookAt(Ogre::Vector3(0, 0, 0));
-  m_camera->setNearClipDistance(5);
+  mCameraTargetNode =
+          m_sceneManager->getRootSceneNode()->createChildSceneNode("Camera Target Node 0");
+  mCameraTargetNode->setPosition(Ogre::Vector3(0, 0, 0));
+
+  mCamera->setPosition(Ogre::Vector3(45, 20, 20));
+  mCamera->lookAt(Ogre::Vector3(0, 0, 0));
+  mCamera->setNearClipDistance(5);
 
   // create viewports
-  Ogre::Viewport *vp = ogreWindow_->addViewport(m_camera);
+  Ogre::Viewport *vp = ogreWindow_->addViewport(mCamera);
   vp->setBackgroundColour(Ogre::ColourValue(0, 0, 0));
   // When a viewport is already created
   vp->setMaterialScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 
-  m_camera->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
+  mCamera->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
                           Ogre::Real(vp->getActualHeight()));
 
   ogreRoot_->getRenderSystem()->_initRenderTargets();
@@ -76,10 +82,17 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
   // createScene()
   m_sceneManager->setAmbientLight(Ogre::ColourValue(0.7, 0.7, 0.7));
 
-  m_meshEntity = m_sceneManager->createEntity("01_pmx.mesh");
-  Ogre::SceneNode *mNode = m_sceneManager->getRootSceneNode()->createChildSceneNode(
+  mMeshEntity = m_sceneManager->createEntity("01_pmx.mesh");
+  mNode = m_sceneManager->getRootSceneNode()->createChildSceneNode(
       Ogre::Vector3(0, 0, 0));
-  mNode->attachObject(m_meshEntity);
+  mNode->attachObject(mMeshEntity);
+
+  // mMeshEntity->setDisplaySkeleton(true);
+  Ogre::SkeletonInstance *skeleton = mMeshEntity->getSkeleton();
+  for (auto bone : skeleton->getBones()) {
+    std::cout << "bone #" << bone->getHandle() << ": " << bone->getName()
+              << std::endl;
+  }
 
   std::deque<Ogre::Vector3> mWalkList;
   mWalkList.push_back(Ogre::Vector3(550.0, 0, 50.0));
@@ -269,145 +282,139 @@ void SceneMenu::setupResources() {
 }
 
 //-----------------------------------------------------------------------------
-//defaultCamera()
-//Description:
+// defaultCamera()
+// Description:
 //	Defaults camera position to 0, centerY, 0, with the default angle,
 //	making it look to the model as a whole
-//Notes:
+// Notes:
 //	1) If no model is loaded, it redirects to originCamera()
 //-----------------------------------------------------------------------------
-void SceneMenu::defaultCamera()
-{
-    if( m_meshEntity )
-    {
-        Ogre::Vector3 vCenter = Ogre::Vector3( 0.0f, (m_meshEntity->getBoundingBox().getMaximum().y +
-                                                    m_meshEntity->getBoundingBox().getMinimum().y) * 0.5f,
-                                                0.0f );
-        /*Ogre::Vector3 vCenter = (m_meshEntity->getBoundingBox().getMaximum() +
-                                 m_meshEntity->getBoundingBox().getMinimum()) * 0.5f;
-        m_camera->setPosition( vCenter + Ogre::Vector3( 0, 1.5f, 1.5f) * m_meshEntity->getBoundingRadius() );
-        m_camera->lookAt( vCenter );*/
-        m_camera->setPosition( Ogre::Vector3::UNIT_Z * m_meshEntity->getBoundingRadius() * 1.8f );
-        m_cameraNode->setOrientation( Ogre::Quaternion::IDENTITY );
-        m_cameraNode->pitch( Ogre::Degree( -45.0f ) );
-        m_cameraNode->getParent()->setPosition( vCenter );
-        m_cameraNode->setPosition( Ogre::Vector3::ZERO );
-    }
-    else
-        originCamera();
+void SceneMenu::defaultCamera() {
+  if (mMeshEntity) {
+    Ogre::Vector3 vCenter =
+        Ogre::Vector3(0.0f,
+                      (mMeshEntity->getBoundingBox().getMaximum().y +
+                       mMeshEntity->getBoundingBox().getMinimum().y) *
+                          0.5f,
+                      0.0f);
+    /*Ogre::Vector3 vCenter = (mMeshEntity->getBoundingBox().getMaximum() +
+                             mMeshEntity->getBoundingBox().getMinimum()) *
+    0.5f; mCamera->setPosition( vCenter + Ogre::Vector3( 0, 1.5f, 1.5f) *
+    mMeshEntity->getBoundingRadius() ); mCamera->lookAt( vCenter );*/
+    mCamera->setPosition(Ogre::Vector3::UNIT_Z *
+                         mMeshEntity->getBoundingRadius() * 1.8f);
+    mCameraNode->setOrientation(Ogre::Quaternion::IDENTITY);
+    mCameraNode->pitch(Ogre::Degree(-45.0f));
+    mCameraNode->getParent()->setPosition(vCenter);
+    mCameraNode->setPosition(Ogre::Vector3::ZERO);
+  } else
+    originCamera();
 }
 
 //-----------------------------------------------------------------------------
-//originCamera()
-//Description:
+// originCamera()
+// Description:
 //	Defaults camera position to 0, 0, 0, with the default angle
 //-----------------------------------------------------------------------------
-void SceneMenu::originCamera()
-{
-    float factor = 10.0f;
-    if( m_meshEntity )
-        factor = m_meshEntity->getBoundingRadius() * 1.8f;
+void SceneMenu::originCamera() {
+  float factor = 10.0f;
+  if (mMeshEntity)
+    factor = mMeshEntity->getBoundingRadius() * 1.8f;
 
-    m_camera->setPosition( Ogre::Vector3::UNIT_Z * factor );
-    m_cameraNode->setOrientation( Ogre::Quaternion::IDENTITY );
-    m_cameraNode->pitch( Ogre::Degree( -45.0f ) );
-    m_cameraNode->getParent()->setPosition( Ogre::Vector3::ZERO );
-    m_cameraNode->setPosition( Ogre::Vector3::ZERO );
+  mCamera->setPosition(Ogre::Vector3::UNIT_Z * factor);
+  mCameraNode->setOrientation(Ogre::Quaternion::IDENTITY);
+  mCameraNode->pitch(Ogre::Degree(-45.0f));
+  mCameraNode->getParent()->setPosition(Ogre::Vector3::ZERO);
+  mCameraNode->setPosition(Ogre::Vector3::ZERO);
 }
 
 //-----------------------------------------------------------------------------
-//centerMeshCamera()
-//Description:
+// centerMeshCamera()
+// Description:
 //	Like defaultCamera(), but pointing at the exact center of the mesh
-//Notes:
+// Notes:
 //	1) Does nothing if the mesh isn't loaded
 //-----------------------------------------------------------------------------
-void SceneMenu::centerMeshCamera()
-{
-    if( m_meshEntity )
-    {
-        const Ogre::Vector3 vCenter = (m_meshEntity->getBoundingBox().getMaximum() +
-                                        m_meshEntity->getBoundingBox().getMinimum()) * 0.5f;
-        m_camera->setPosition( Ogre::Vector3::UNIT_Z * m_meshEntity->getBoundingRadius() * 1.8f );
-        m_cameraNode->setOrientation( Ogre::Quaternion::IDENTITY );
-        m_cameraNode->pitch( Ogre::Degree( -45.0f ) );
-        m_cameraNode->getParent()->setPosition( vCenter );
-        m_cameraNode->setPosition( Ogre::Vector3::ZERO );
-    }
-}
-
-
-//-----------------------------------------------------------------------------
-//rotateCamera()
-//Description:
-//	Manipulates the yaw and pitch of the camera, around and relative to the
-//	center of the mesh, when the mouse is moved
-//Input:
-//	1) X delta, in pixels
-//	2) Y delta, in pixels
-//-----------------------------------------------------------------------------
-void SceneMenu::rotateCamera( int x, int y )
-{
-    m_cameraNode->yaw( Ogre::Degree( -x * 0.4f ), Ogre::Node::TS_PARENT );
-    m_cameraNode->pitch( Ogre::Degree( -y * 0.4f ) );
+void SceneMenu::centerMeshCamera() {
+  if (mMeshEntity) {
+    const Ogre::Vector3 vCenter = (mMeshEntity->getBoundingBox().getMaximum() +
+                                   mMeshEntity->getBoundingBox().getMinimum()) *
+                                  0.5f;
+    mCamera->setPosition(Ogre::Vector3::UNIT_Z *
+                         mMeshEntity->getBoundingRadius() * 1.8f);
+    mCameraNode->setOrientation(Ogre::Quaternion::IDENTITY);
+    mCameraNode->pitch(Ogre::Degree(-45.0f));
+    mCameraNode->getParent()->setPosition(vCenter);
+    mCameraNode->setPosition(Ogre::Vector3::ZERO);
+  }
 }
 
 //-----------------------------------------------------------------------------
-//zoomInCamera()
-//Description:
+// rotateCamera()
+// Style same as Ogre::CameraMan::Orbit
+//-----------------------------------------------------------------------------
+void SceneMenu::rotateCamera(int x, int y) {
+  Ogre::Real dist =
+      (mCamera->getPosition() - mNode->_getDerivedPosition()).length();
+
+  //mCamera->setPosition(mNode->_getDerivedPosition());
+
+  //mCamera->yaw(Ogre::Degree(x * 0.25f));
+  //mCamera->pitch(Ogre::Degree(y * 0.25f));
+
+  //mCamera->moveRelative(Ogre::Vector3(0, 0, dist));
+
+  mCameraNode->yaw(Ogre::Degree(-x * 0.4f), Ogre::Node::TS_PARENT);
+  mCameraNode->pitch(Ogre::Degree(-y * 0.4f));
+}
+
+//-----------------------------------------------------------------------------
+// zoomInCamera()
+// Description:
 //
-//Input:
+// Input:
 //	1) Z delta
 //-----------------------------------------------------------------------------
-void SceneMenu::zoomInCamera( Ogre::Real wheelDelta )
-{
-    float factor = 1.0f;
-    if( m_meshEntity )
-        factor = m_meshEntity->getBoundingRadius() * 0.5f;
-
-    m_camera->move( Ogre::Vector3::UNIT_Z * wheelDelta * factor );
-
-    //Clamp max zoom in, to keep going use slideCamera
-    if( m_camera->getPosition().z < 0.0f )
-        m_camera->setPosition( Ogre::Vector3::ZERO );
+void SceneMenu::zoomInCamera(Ogre::Real wheelDelta) {
+  Ogre::Real dist =
+      (mCamera->getPosition() - mCameraTargetNode->_getDerivedPosition()).length();
+  mCamera->moveRelative(Ogre::Vector3(0, 0, -wheelDelta * 0.004f * dist));
 }
 
 //-----------------------------------------------------------------------------
-//moveCamera()
-//Description:
+// moveCamera()
+// Description:
 //	Moves the whole camera among the relative X and Y axis
-//Input:
+// Input:
 //	1) X delta, in pixels
 //	2) Y delta, in pixels
 //-----------------------------------------------------------------------------
-void SceneMenu::moveCamera( int x, int y )
-{
-    if( m_meshEntity )
-    {
-        Ogre::Vector3 vTrans( -x, y, 0 );
-        vTrans *= m_meshEntity->getBoundingRadius() * 0.005f;
-        m_cameraNode->translate( vTrans, Ogre::Node::TS_LOCAL );
-    }
+void SceneMenu::moveCamera(int x, int y) {
+  if (mMeshEntity) {
+    Ogre::Vector3 vTrans(-x, y, 0);
+    vTrans *= mMeshEntity->getBoundingRadius() * 0.005f;
+    mCameraTargetNode->translate(vTrans, Ogre::Node::TS_LOCAL);
+    mCameraNode->translate(vTrans, Ogre::Node::TS_LOCAL);
+    mCamera->lookAt(mCameraTargetNode->getPosition());
+  }
 }
 
 //-----------------------------------------------------------------------------
-//slideCamera()
-//Description:
+// slideCamera()
+// Description:
 //	Moves the whole camera among the relative X and Z axis
-//Notes:
+// Notes:
 //	1) slideCamera( x, 0 ) == moveCamera( x, 0 )
-//Input:
+// Input:
 //	1) X delta, in pixels
 //	2) Z delta, in pixels
 //-----------------------------------------------------------------------------
-void SceneMenu::slideCamera( int x, int z )
-{
-    if( m_meshEntity )
-    {
-        Ogre::Vector3 vTrans( -x, 0, -z );
-        vTrans *= m_meshEntity->getBoundingRadius() * 0.005f;
-        m_cameraNode->translate( vTrans, Ogre::Node::TS_LOCAL );
-    }
+void SceneMenu::slideCamera(int x, int z) {
+  if (mMeshEntity) {
+    Ogre::Vector3 vTrans(-x, 0, -z);
+    vTrans *= mMeshEntity->getBoundingRadius() * 0.005f;
+    mCameraNode->translate(vTrans, Ogre::Node::TS_LOCAL);
+  }
 }
 
 ShaderGeneratorTechniqueResolverListener::

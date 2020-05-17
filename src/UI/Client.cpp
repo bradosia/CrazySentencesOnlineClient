@@ -23,7 +23,7 @@ ClientWidget::ClientWidget()
 ClientWidget::~ClientWidget() {
   // Cleanup
   ImGui_ImplOpenGL3_Shutdown();
-  //ImGui_ImplSDL2_Shutdown();
+  // ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
 };
 
@@ -186,6 +186,8 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
     fontArialText = io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 12);
   }
 
+
+
   // Our state
   clear_color = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
 
@@ -193,7 +195,9 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   Ogre::RTShader::ShaderGenerator::initialize();
   Ogre::RTShader::ShaderGenerator *mShaderGenerator =
       Ogre::RTShader::ShaderGenerator::getSingletonPtr();
-  mShaderGenerator->setShaderCachePath("ShaderCache/");
+  boost::filesystem::path shaderPath =
+      programPath.parent_path() / "ShaderCache";
+  mShaderGenerator->setShaderCachePath(shaderPath.string());
 
   // Select scene
   menuScene = std::make_shared<SceneMenu>();
@@ -290,6 +294,9 @@ bool ClientWidget::handleEventFromSdl(SDL_Event *event) {
 }
 
 void ClientWidget::mousePressEvent(SDL_Event *event) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
   SDL_GetMouseState(&m_mouseX, &m_mouseY);
   if (event->button.button == SDL_BUTTON_LEFT) {
     m_wasLeftPressed = true;
@@ -301,6 +308,9 @@ void ClientWidget::mousePressEvent(SDL_Event *event) {
 }
 
 void ClientWidget::mouseReleaseEvent(SDL_Event *event) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
   if (event->button.button == SDL_BUTTON_LEFT) {
     m_wasLeftPressed = false;
   } else if (event->button.button == SDL_BUTTON_RIGHT) {
@@ -310,6 +320,9 @@ void ClientWidget::mouseReleaseEvent(SDL_Event *event) {
   }
 }
 void ClientWidget::mouseMoveEvent(SDL_Event *event) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
   const int oldX = m_mouseX;
   const int oldY = m_mouseY;
   SDL_GetMouseState(&m_mouseX, &m_mouseY);
@@ -326,6 +339,9 @@ void ClientWidget::mouseMoveEvent(SDL_Event *event) {
 }
 
 void ClientWidget::wheelEvent(SDL_Event *event) {
+  ImGuiIO &io = ImGui::GetIO();
+  if (io.WantCaptureMouse)
+    return;
   menuScene->zoomInCamera(event->wheel.y);
 }
 
@@ -355,9 +371,7 @@ void ClientWidget::resizeEvent(SDL_Event *event) {
   }
 }
 
-void ClientWidget::exitEvent(SDL_Event *event) {
-    *mainLoopFlag = true;
-}
+void ClientWidget::exitEvent(SDL_Event *event) { *mainLoopFlag = true; }
 
 void ClientWidget::setMainLoopFlag(bool *mainLoopFlag_) {
   mainLoopFlag = mainLoopFlag_;

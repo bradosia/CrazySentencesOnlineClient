@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.11)
+# The FetchModule is only available since CMake 3.11.
 
 set(lib_base_name CrazySentencesOnlineClient)
 project(${lib_base_name} VERSION 1.0.0 LANGUAGES CXX)
@@ -10,6 +11,9 @@ OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
 OPTION(BUILD_STATIC_LIBS "Build static libraries" ON)
 
 set(CMAKE_CXX_STANDARD 17)
+
+include(ExternalProject)
+include(CMakePackageConfigHelpers)
 
 find_package(OGRE 1.09 REQUIRED)
 find_package(Boost 1.56 REQUIRED COMPONENTS
@@ -36,7 +40,11 @@ set(LINK_DIRECTORIES
 
 # MODULES
 add_subdirectory(src/modules/)
+add_subdirectory(third_party/)
+add_subdirectory(third_party/assimp-xnalara/)
 add_subdirectory(third_party/imgui/)
+add_subdirectory(samples/viewer/)
+add_subdirectory(samples/converter/)
 
 # Set up source files
 set(SOURCES
@@ -44,6 +52,7 @@ set(SOURCES
 
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
+  src/core/importerMmdVpd.cpp
 )
 
 set(HEADERS
@@ -53,6 +62,7 @@ set(HEADERS
 
   src/UI/Client.hpp
   src/UI/SceneMenu.hpp
+  src/core/importerMmdVpd.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS
@@ -71,6 +81,9 @@ set(LIBRARIES ${LIBRARIES}
     imgui
     SDL2main
     SDL2
+
+    # assimp
+    assimp-xnalara
 
     # Boost
     Boost::system
@@ -145,8 +158,6 @@ endif(BUILD_STATIC_LIBS)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-include(CMakePackageConfigHelpers)
-
 if(BUILD_SHARED_LIBS)
   add_library(${lib_shared_name} SHARED  ${SOURCES} ${HEADERS})
   target_compile_features(${lib_shared_name} PUBLIC cxx_std_17)
@@ -194,6 +205,7 @@ endif()
 # Post build
 if(BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${lib_shared_name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_shared_name}> "${RELEASE_DIR}/modules/"
         # Make a release directory without all the cmake extras.
@@ -213,40 +225,22 @@ endif()
 if(BUILD_SHARED_LIBS)
   message(STATUS "INSTALL: ${lib_shared_name} TO root=${CMAKE_BINARY_DIR} and current=${CMAKE_CURRENT_BINARY_DIR}")
   install(TARGETS ${lib_shared_name}
-    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/modules"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/modules"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/modules"
+    RUNTIME DESTINATION "${RELEASE_DIR}/modules"
+    ARCHIVE DESTINATION "${RELEASE_DIR}/modules"
+    LIBRARY DESTINATION "${RELEASE_DIR}/modules"
   )
 endif()
 
 if(BUILD_STATIC_LIBS)
   install(TARGETS ${lib_name} EXPORT ${lib_name}_TARGETS
-    RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/lib"
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/lib"
-    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/lib"
+    RUNTIME DESTINATION "${RELEASE_DIR}/lib"
+    ARCHIVE DESTINATION "${RELEASE_DIR}/lib"
+    LIBRARY DESTINATION "${RELEASE_DIR}/lib"
   )
 endif()
 
 install(FILES ${HEADERS}
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/headers"
+  DESTINATION "${RELEASE_DIR}/headers"
 COMPONENT Headers)
 
-install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_INSTALL_PREFIX}/${BIN_NAME}/doc/" RENAME "${lib_name}_LICENSE.txt" )
-
-add_executable(example
-    src/example/main.cpp
-)
-target_include_directories(example PUBLIC
-    src/
-)
-target_link_libraries(example PUBLIC
-    ${lib_name}
-    #SDL2main
-    #SDL2
-)
-
-add_custom_command(TARGET example POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}"
-    #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:example> "${RELEASE_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/lib/windows/" "${RELEASE_DIR}/"
-)
+install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION "${RELEASE_DIR}" RENAME "LICENSE.txt" )

@@ -30,6 +30,7 @@
 /* Ogre3D 1.12.2
  * License: MIT
  */
+#include <OgreBone.h>
 #include <OgreCamera.h>
 #include <OgreConfigFile.h>
 #include <OgreEntity.h>
@@ -40,6 +41,8 @@
 #include <OgreRoot.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
+#include <OgreSkeleton.h>
+#include <OgreSkeletonInstance.h>
 #include <OgreTechnique.h>
 #include <OgreTextureManager.h>
 #include <OgreViewport.h>
@@ -92,9 +95,11 @@ private:
   Ogre::RTShader::ShaderGenerator *mShaderGenerator;
   // Shader generator material manager listener.
   ShaderGeneratorTechniqueResolverListener *mMaterialMgrListener;
-  Ogre::Entity *m_meshEntity;
-  Ogre::Camera *m_camera;
-  Ogre::SceneNode *m_cameraNode;
+  Ogre::Entity *mMeshEntity;
+  Ogre::Camera *mCamera;
+  Ogre::SceneNode *mCameraNode;
+  Ogre::SceneNode *mCameraTargetNode;
+  Ogre::SceneNode *mNode;
 };
 
 } // namespace CSO
