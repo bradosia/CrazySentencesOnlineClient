@@ -51,7 +51,6 @@ set(SOURCES
 
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
-  src/core/importerMmdVpd.cpp
 )
 
 set(HEADERS
@@ -61,7 +60,6 @@ set(HEADERS
 
   src/UI/Client.hpp
   src/UI/SceneMenu.hpp
-  src/core/importerMmdVpd.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS

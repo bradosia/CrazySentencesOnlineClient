@@ -7,7 +7,7 @@
  */
 
 // Config
-#include "../core/config.hpp"
+#include "config.hpp"
 
 // C
 #include <stdio.h>
@@ -29,7 +29,7 @@
 /* Crazy Sentences Online 1.0
  * License: MIT
  */
-#include "../Module.hpp"
+#include <CrazySentencesOnlineClient/Module.hpp>
 
 int main(int argc, char *argv[]) {
   CSO::ModuleExport CsoClientModuleExport;

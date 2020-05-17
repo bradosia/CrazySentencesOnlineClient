@@ -2,7 +2,7 @@ add_executable(viewer
     main.cpp
 )
 target_include_directories(viewer PUBLIC
-    ../../
+    ../../include/
 )
 target_link_libraries(viewer PUBLIC
     CrazySentencesOnlineClient
