@@ -41,3 +41,10 @@ modules/libhocrEditModuleLibShared.so.1.0.0 exception fix:
 ```shell
 sudo cp /usr/lib/x86_64-linux-gnu/libzzip-0.so.13.0.62 /usr/lib/x86_64-linux-gnu/libzzip.so.13
 ```
+
+## Notes
+
+```shell
+_ZNSt6thread15_M_start_threadESt10unique_ptrINS_6_StateESt14default_deleteIS1_EEPFvvE
+```
+caused by a missing libstdc++-6.dll
