@@ -1,6 +1,7 @@
 build/
 lib/
 CMakeLists.txt.user
+third_party/ogre
 
 
 # Prerequisites

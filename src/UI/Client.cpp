@@ -8,6 +8,26 @@
 
 // Local Project
 #include "Client.hpp"
+#if CSO_ASSIMP_ENABLE
+#include "../core/AssimpLoader.hpp"
+#include "../core/AssimpOgreUtility.hpp"
+#endif
+
+/* Ogre3D 1.12.2
+ * License: MIT
+ */
+#include <OgreCamera.h>
+#include <OgreException.h>
+#include <OgreTextureManager.h>
+#include <OgreViewport.h>
+#if OGRE_STATIC
+#include <Plugins/STBICodec/OgreSTBICodec.h>
+#include <RenderSystems/GL3Plus/OgreGL3PlusPlugin.h>
+#include <RenderSystems/GL3Plus/OgreGLRenderSystemCommon.h>
+#endif
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
+#include <RTShaderSystem/OgreRTShaderSystem.h>
+#endif
 
 /*
  * CSO = Crazy Sentences Online
@@ -31,18 +51,97 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   window = window_;
   int windowWidthInt, windowHeightInt;
   SDL_GetWindowSize(window, &windowWidthInt, &windowHeightInt);
-  unsigned int windowWidth = static_cast<unsigned int>(windowWidthInt);
-  unsigned int windowHeight = static_cast<unsigned int>(windowHeightInt);
+  windowWidth = static_cast<unsigned int>(windowWidthInt);
+  windowHeight = static_cast<unsigned int>(windowHeightInt);
 
   std::cout << "ClientWidget::initGraphics" << std::endl;
+
+  // Ogre Initialize
+  initOgre();
+
+  // Initialize OpenGL loader
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+  bool err = gl3wInit() != 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+  bool err = glewInit() != GLEW_OK;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+  bool err = gladLoadGL() == 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+  bool err = false;
+  glbinding::initialize([](const char *name) {
+    return (glbinding::ProcAddress)glfwGetProcAddress(name);
+  });
+#else
+  bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader
+                    // is likely to requires some form of initialization.
+#endif
+  if (err) {
+#if HOCR_EDIT_MODULE_MAIN_WIDGET_INIT_GRAPHICS_DEBUG
+    std::cout << "ClientWidget::initGraphics initialization ERROR" << std::endl;
+#endif
+    return false;
+  }
+
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+
+  // Setup Dear ImGui style
+  setStyle1();
+
+  // Setup Platform/Renderer bindings
+  SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
+  ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+  ImGui_ImplOpenGL3_Init(glsl_version);
+
+  // Load Fonts
+  // - If no fonts are loaded, dear imgui will use the default font. You can
+  // also load multiple fonts and use ImGui::PushFont()/PopFont() to select
+  // them.
+  // - AddFontFromFileTTF() will return the ImFont* so you can store it if you
+  // need to select the font among multiple.
+  // - If the file cannot be loaded, the function will return NULL. Please
+  // handle those errors in your application (e.g. use an assertion, or display
+  // an error and quit).
+  // - The fonts will be rasterized at a given size (w/ oversampling) and stored
+  // into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which
+  // ImGui_ImplXXXX_NewFrame below will call.
+  // - Read 'docs/FONTS.txt' for more instructions and details.
+  // - Remember that in C/C++ if you want to include a backslash \ in a string
+  // literal you need to write a double backslash \\ !
+  boost::filesystem::path programPath = boost::dll::program_location();
+  std::cout << "programPath: " << programPath << std::endl;
+  boost::filesystem::path fontPath =
+      programPath.parent_path() / "fonts/arial.ttf";
+  std::cout << "fontPath: " << fontPath << std::endl;
+  if (boost::filesystem::is_regular_file(fontPath)) {
+    std::cout << "fontPath FOUND!: " << fontPath << std::endl;
+    fontArialTitle =
+        io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 22);
+    fontArialText = io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 12);
+  }
+
+  // Our state
+  clear_color = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
+
+  return true;
+}
+
+bool ClientWidget::initOgre() {
+#if CSO_OGRE_ENABLE
   // Ogre Initialize
   ogreRoot = std::make_shared<Ogre::Root>(Ogre::BLANKSTRING, Ogre::BLANKSTRING,
                                           Ogre::BLANKSTRING);
-#if defined(OGRE_STATIC)
-  root->installPlugin(new Ogre::GLPlugin);
-  // root->installPlugin(new Ogre::GL3PlusPlugin);
+
+  /* Note: if no .png and .jpg codec is found, then a yellow image results
+   * Ogre::STBIPlugin handles these codecs
+   */
+#if OGRE_STATIC_RENDER
+  ogreRoot->installPlugin(new Ogre::STBIPlugin);
+  ogreRoot->installPlugin(new Ogre::GL3PlusPlugin);
 #else
-  // root->loadPlugin("RenderSystem_GL");
   ogreRoot->loadPlugin("Codec_STBI");
   ogreRoot->loadPlugin("RenderSystem_GL3Plus");
 #endif
@@ -110,8 +209,11 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 
   Ogre::String name = "RenderWindow #" + std::to_string(winHandle);
   try {
-    renderWindow.reset(ogreRoot->createRenderWindow(
-        name, windowWidth, windowHeight, false, &params));
+    renderWindow = ogreRoot->createRenderWindow(name, windowWidth, windowHeight,
+                                                false, &params);
+    /* How to access the render window without saving the pointer?
+     * use Ogre::Root::getRenderTarget and cast the pointer to a RenderWindow*
+     */
   } catch (Ogre::RenderingAPIException e) {
     std::cout << e.getDescription() << std::endl;
     std::cout << e.what() << std::endl;
@@ -122,86 +224,23 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 
   renderWindow->setVisible(true);
 
-// Initialize OpenGL loader
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-  bool err = gl3wInit() != 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-  bool err = glewInit() != GLEW_OK;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-  bool err = gladLoadGL() == 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
-  bool err = false;
-  glbinding::initialize([](const char *name) {
-    return (glbinding::ProcAddress)glfwGetProcAddress(name);
-  });
-#else
-  bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader
-                    // is likely to requires some form of initialization.
-#endif
-  if (err) {
-#if HOCR_EDIT_MODULE_MAIN_WIDGET_INIT_GRAPHICS_DEBUG
-    std::cout << "ClientWidget::initGraphics initialization ERROR" << std::endl;
-#endif
-    return false;
-  }
-
-  // Setup Dear ImGui context
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
-
-  // Setup Dear ImGui style
-  setStyle1();
-
-  // Setup Platform/Renderer bindings
-  SDL_GLContext gl_context = SDL_GL_GetCurrentContext();
-  ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
-  ImGui_ImplOpenGL3_Init(glsl_version);
-
-  // Load Fonts
-  // - If no fonts are loaded, dear imgui will use the default font. You can
-  // also load multiple fonts and use ImGui::PushFont()/PopFont() to select
-  // them.
-  // - AddFontFromFileTTF() will return the ImFont* so you can store it if you
-  // need to select the font among multiple.
-  // - If the file cannot be loaded, the function will return NULL. Please
-  // handle those errors in your application (e.g. use an assertion, or display
-  // an error and quit).
-  // - The fonts will be rasterized at a given size (w/ oversampling) and stored
-  // into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which
-  // ImGui_ImplXXXX_NewFrame below will call.
-  // - Read 'docs/FONTS.txt' for more instructions and details.
-  // - Remember that in C/C++ if you want to include a backslash \ in a string
-  // literal you need to write a double backslash \\ !
   boost::filesystem::path programPath = boost::dll::program_location();
-  std::cout << "programPath: " << programPath << std::endl;
-  boost::filesystem::path fontPath =
-      programPath.parent_path() / "fonts/arial.ttf";
-  std::cout << "fontPath: " << fontPath << std::endl;
-  if (boost::filesystem::is_regular_file(fontPath)) {
-    std::cout << "fontPath FOUND!: " << fontPath << std::endl;
-    fontArialTitle =
-        io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 22);
-    fontArialText = io.Fonts->AddFontFromFileTTF(fontPath.string().c_str(), 12);
-  }
-
-
-
-  // Our state
-  clear_color = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
-
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
   // Shortly after initialising Ogre::Root
   Ogre::RTShader::ShaderGenerator::initialize();
   Ogre::RTShader::ShaderGenerator *mShaderGenerator =
       Ogre::RTShader::ShaderGenerator::getSingletonPtr();
   boost::filesystem::path shaderPath =
-      programPath.parent_path() / "ShaderCache";
+      programPath.parent_path() / "RTShaderCache";
   mShaderGenerator->setShaderCachePath(shaderPath.string());
+#endif
 
+#if CSO_SCENE_MENU_ENABLE
   // Select scene
   menuScene = std::make_shared<SceneMenu>();
   menuScene->initialize(ogreRoot, renderWindow);
+#endif
+#endif
   return true;
 }
 
@@ -213,12 +252,40 @@ bool ClientWidget::render() {
   ImGui_ImplSDL2_NewFrame(window);
   ImGui::NewFrame();
 
+  // Demonstrate creating a "main" fullscreen menu bar and populating it.
+  // Note the difference between BeginMainMenuBar() and BeginMenuBar():
+  // - BeginMenuBar() = menu-bar inside current window we Begin()-ed into (the
+  // window needs the ImGuiWindowFlags_MenuBar flag)
+  // - BeginMainMenuBar() = helper to create menu-bar-sized window at the top of
+  // the main viewport + call BeginMenuBar() into it.
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      ShowExampleMenuFile();
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+      if (ImGui::MenuItem("Undo", "CTRL+Z")) {
+      }
+      if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {
+      } // Disabled item
+      ImGui::Separator();
+      if (ImGui::MenuItem("Cut", "CTRL+X")) {
+      }
+      if (ImGui::MenuItem("Copy", "CTRL+C")) {
+      }
+      if (ImGui::MenuItem("Paste", "CTRL+V")) {
+      }
+      ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+  }
+
   {
     static float f = 0.0f;
     static int counter = 0;
 
-    ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!" and
-                                   // append into it.
+    // ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::Begin("Debug");
 
     ImGui::Text("This is some useful text."); // Display some text (you can use
                                               // a format strings too)
@@ -253,6 +320,8 @@ bool ClientWidget::render() {
   glClear(GL_COLOR_BUFFER_BIT);
 
   SDL_GL_MakeCurrent(window, SDL_GL_GetCurrentContext());
+
+#if CSO_OGRE_ENABLE
   // Render ogre first
   /* terminate called after throwing an instance of
    * 'Ogre::InvalidStateException'
@@ -261,7 +330,17 @@ bool ClientWidget::render() {
    * the requested material is missing or when a new material is created) and
    * BaseWhiteNoLighting (same as BaseWhite but with the light turned off).
    */
-  ogreRoot->renderOneFrame();
+  try {
+    ogreRoot->renderOneFrame();
+  } catch (Ogre::Exception e) {
+    std::cout << "ClientWidget::render() Exception: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cout << "ClientWidget::render() Exception!" << std::endl;
+    return false;
+  }
+#endif
+
   // Render imgui after
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   return true;
@@ -271,11 +350,11 @@ bool ClientWidget::handleEventFromSdl(SDL_Event *event) {
   while (SDL_PollEvent(event)) {
     ImGui_ImplSDL2_ProcessEvent(event);
     if (event->type == SDL_QUIT) {
-      exitEvent(event);
+      exit();
     } else if (event->type == SDL_WINDOWEVENT) {
       if (event->window.event == SDL_WINDOWEVENT_CLOSE &&
           event->window.windowID == SDL_GetWindowID(window)) {
-        exitEvent(event);
+        exit();
       } else {
         resizeEvent(event);
       }
@@ -327,6 +406,7 @@ void ClientWidget::mouseMoveEvent(SDL_Event *event) {
   const int oldY = m_mouseY;
   SDL_GetMouseState(&m_mouseX, &m_mouseY);
 
+#if CSO_SCENE_MENU_ENABLE
   if (m_wasLeftPressed) {
     menuScene->rotateCamera(m_mouseX - oldX, m_mouseY - oldY);
   }
@@ -336,42 +416,43 @@ void ClientWidget::mouseMoveEvent(SDL_Event *event) {
   if (m_wasMiddlePressed) {
     menuScene->moveCamera(m_mouseX - oldX, m_mouseY - oldY);
   }
+#endif
 }
 
 void ClientWidget::wheelEvent(SDL_Event *event) {
   ImGuiIO &io = ImGui::GetIO();
   if (io.WantCaptureMouse)
     return;
+#if CSO_SCENE_MENU_ENABLE
   menuScene->zoomInCamera(event->wheel.y);
+#endif
 }
 
 void ClientWidget::resizeEvent(SDL_Event *event) {
   if (event->window.event == SDL_WINDOWEVENT_RESIZED) {
-    if (renderWindow) {
-      renderWindow->windowMovedOrResized();
-#if OGRE_VERSION_MAJOR < 2
-      Ogre::Viewport *vp = renderWindow->getViewport(0);
-      if (vp) {
-        vp->getCamera()->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
-                                        Ogre::Real(vp->getActualHeight()));
-      }
-#endif
-    }
+    resizeOgre();
   } else if (event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-    if (renderWindow) {
-      renderWindow->windowMovedOrResized();
-#if OGRE_VERSION_MAJOR < 2
-      Ogre::Viewport *vp = renderWindow->getViewport(0);
-      if (vp) {
-        vp->getCamera()->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
-                                        Ogre::Real(vp->getActualHeight()));
-      }
-#endif
-    }
+    resizeOgre();
   }
 }
 
-void ClientWidget::exitEvent(SDL_Event *event) { *mainLoopFlag = true; }
+bool ClientWidget::resizeOgre() {
+#if CSO_OGRE_ENABLE
+  if (renderWindow) {
+    renderWindow->windowMovedOrResized();
+#if OGRE_VERSION_MAJOR < 2
+    Ogre::Viewport *vp = renderWindow->getViewport(0);
+    if (vp) {
+      vp->getCamera()->setAspectRatio(Ogre::Real(vp->getActualWidth()) /
+                                      Ogre::Real(vp->getActualHeight()));
+    }
+  }
+#endif
+#endif
+  return true;
+}
+
+bool ClientWidget::exit() { *mainLoopFlag = true; }
 
 void ClientWidget::setMainLoopFlag(bool *mainLoopFlag_) {
   mainLoopFlag = mainLoopFlag_;
@@ -400,8 +481,8 @@ void ClientWidget::setStyle1() {
   // 1.00f, 1.00f); style.Colors[ImGuiCol_TextActive]            =
   // ImVec4(1.00f, 1.00f, 0.00f, 1.00f);
   style.Colors[ImGuiCol_WindowBg] = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
-  // style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f, 0.00f,
-  // 0.00f);
+  // style.Colors[ImGuiCol_ChildWindowBg]         = ImVec4(0.00f, 0.00f,
+  // 0.00f, 0.00f);
   style.Colors[ImGuiCol_Border] = ImVec4(0.00f, 0.00f, 0.00f, 0.39f);
   style.Colors[ImGuiCol_BorderShadow] = ImVec4(1.00f, 1.00f, 1.00f, 0.10f);
   style.Colors[ImGuiCol_FrameBg] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
@@ -417,8 +498,8 @@ void ClientWidget::setStyle1() {
       ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
   style.Colors[ImGuiCol_ScrollbarGrabActive] =
       ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
-  // style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f, 0.86f,
-  // 0.99f);
+  // style.Colors[ImGuiCol_ComboBg]               = ImVec4(0.86f, 0.86f,
+  // 0.86f, 0.99f);
   style.Colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
   style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
   style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
@@ -429,24 +510,25 @@ void ClientWidget::setStyle1() {
   style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
   style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
   // style.Colors[ImGuiCol_Column]                = ImVec4(0.39f, 0.39f,
-  // 0.39f, 1.00f); style.Colors[ImGuiCol_ColumnHovered]         = ImVec4(0.26f,
-  // 0.59f, 0.98f, 0.78f); style.Colors[ImGuiCol_ColumnActive]          =
+  // 0.39f, 1.00f); style.Colors[ImGuiCol_ColumnHovered]         =
+  // ImVec4(0.26f, 0.59f, 0.98f, 0.78f); style.Colors[ImGuiCol_ColumnActive] =
   // ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
   style.Colors[ImGuiCol_ResizeGrip] = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
   style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
   style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-  // style.Colors[ImGuiCol_CloseButton]           = ImVec4(0.59f, 0.59f, 0.59f,
-  // 0.50f); style.Colors[ImGuiCol_CloseButtonHovered]    = ImVec4(0.98f, 0.39f,
-  // 0.36f, 1.00f); style.Colors[ImGuiCol_CloseButtonActive]     = ImVec4(0.98f,
-  // 0.39f, 0.36f, 1.00f);
+  // style.Colors[ImGuiCol_CloseButton]           = ImVec4(0.59f, 0.59f,
+  // 0.59f, 0.50f); style.Colors[ImGuiCol_CloseButtonHovered]    =
+  // ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
+  // style.Colors[ImGuiCol_CloseButtonActive]     = ImVec4(0.98f, 0.39f,
+  // 0.36f, 1.00f);
   style.Colors[ImGuiCol_PlotLines] = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
   style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
   style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
   style.Colors[ImGuiCol_PlotHistogramHovered] =
       ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
   style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
-  // style.Colors[ImGuiCol_TooltipBg]             = ImVec4(1.00f, 1.00f, 1.00f,
-  // 0.94f);
+  // style.Colors[ImGuiCol_TooltipBg]             = ImVec4(1.00f,
+  // 1.00f, 1.00f, 0.94f);
   style.Colors[ImGuiCol_ModalWindowDarkening] =
       ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 }
@@ -477,6 +559,74 @@ void ClientWidget::addDrawArrow() {
   list->PathLineTo({lineP2.x + thickness, lineP2.y});                // P6
   list->PathLineTo({lineP2.x - thickness, lineP2.y});                // P7
   list->PathStroke(IM_COL32(0, 0, 0, 255), true, lineWidth);
+}
+
+// Note that shortcuts are currently provided for display only (future version
+// will add flags to BeginMenu to process shortcuts)
+bool ClientWidget::ShowExampleMenuFile() {
+  ImGui::MenuItem("(dummy menu)", NULL, false, false);
+  if (ImGui::MenuItem("New")) {
+  }
+  if (ImGui::MenuItem("Open", "Ctrl+O")) {
+  }
+  if (ImGui::BeginMenu("Open Recent")) {
+    ImGui::MenuItem("fish_hat.c");
+    ImGui::MenuItem("fish_hat.inl");
+    ImGui::MenuItem("fish_hat.h");
+    if (ImGui::BeginMenu("More..")) {
+      ImGui::MenuItem("Hello");
+      ImGui::MenuItem("Sailor");
+      if (ImGui::BeginMenu("Recurse..")) {
+        ShowExampleMenuFile();
+        ImGui::EndMenu();
+      }
+      ImGui::EndMenu();
+    }
+    ImGui::EndMenu();
+  }
+  if (ImGui::MenuItem("Save", "Ctrl+S")) {
+  }
+  if (ImGui::MenuItem("Save As..")) {
+  }
+  ImGui::Separator();
+  if (ImGui::BeginMenu("Options")) {
+    static bool enabled = true;
+    ImGui::MenuItem("Enabled", "", &enabled);
+    ImGui::BeginChild("child", ImVec2(0, 60), true);
+    for (int i = 0; i < 10; i++)
+      ImGui::Text("Scrolling Text %d", i);
+    ImGui::EndChild();
+    static float f = 0.5f;
+    static int n = 0;
+    static bool b = true;
+    ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
+    ImGui::InputFloat("Input", &f, 0.1f);
+    ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
+    ImGui::Checkbox("Check", &b);
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("Colors")) {
+    float sz = ImGui::GetTextLineHeight();
+    for (int i = 0; i < ImGuiCol_COUNT; i++) {
+      const char *name = ImGui::GetStyleColorName((ImGuiCol)i);
+      ImVec2 p = ImGui::GetCursorScreenPos();
+      ImGui::GetWindowDrawList()->AddRectFilled(
+          p, ImVec2(p.x + sz, p.y + sz), ImGui::GetColorU32((ImGuiCol)i));
+      ImGui::Dummy(ImVec2(sz, sz));
+      ImGui::SameLine();
+      ImGui::MenuItem(name);
+    }
+    ImGui::EndMenu();
+  }
+  if (ImGui::BeginMenu("Disabled", false)) // Disabled
+  {
+    IM_ASSERT(0);
+  }
+  if (ImGui::MenuItem("Checked", NULL, true)) {
+  }
+  if (ImGui::MenuItem("Quit", "Alt+F4")) {
+  }
+  return true;
 }
 
 } // namespace CSO

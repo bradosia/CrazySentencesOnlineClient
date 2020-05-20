@@ -6,6 +6,11 @@
  * @brief A game for ESL students to learn and have fun!
  */
 
+// C++
+#include <fstream>
+#include <iostream>
+#include <thread>
+
 /* rapidjson v1.1 (2016-8-25)
  * Developed by Tencent
  * License: MITs
@@ -53,8 +58,8 @@ void ModuleExport::setSettings(std::shared_ptr<rapidjson::Value> data) {
 #endif
 }
 
-std::shared_ptr<Client> ModuleExport::newClient(){
-    return std::make_shared<ClientWidget>();
+std::shared_ptr<Client> ModuleExport::newClient() {
+  return std::make_shared<ClientWidget>();
 }
 
 } // namespace CSO

@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.11)
 set(lib_base_name CrazySentencesOnlineClient)
 project(${lib_base_name} VERSION 1.0.0 LANGUAGES CXX)
 set(RELEASE_DIR "${CMAKE_BINARY_DIR}/${lib_base_name}/")
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${RELEASE_DIR})
 
 # Configurable Options
 OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -21,19 +20,19 @@ find_package(Boost 1.56 REQUIRED COMPONENTS
 
 # third party
 set(INCLUDE_DIRECTORIES
-  ${OGRE_INCLUDE_DIRS}
   third_party/imgui/include/
   third_party/rapidjson/include/
-  third_party/Module-Manager/include/
-  third_party/Settings-Manager/include/
-  third_party/OIS-1.5/includes/
+  third_party/ogre/include/
+  third_party/ogre/include/OGRE/
+  #${OGRE_INCLUDE_DIRS}
   src/modules
 )
 
 set(LINK_DIRECTORIES
-  ${OGRE_LIBRARY_DIRS}
   third_party/imgui/lib/
-  lib/
+  third_party/ogre/lib/
+  third_party/ogre/lib/OGRE/
+  #${OGRE_LIBRARY_DIRS}
   third_party/Module-Manager/lib/
   third_party/Settings-Manager/lib/
 )
@@ -49,6 +48,9 @@ add_subdirectory(samples/viewer/)
 set(SOURCES
   src/Module.cpp
 
+  src/core/AssimpLoader.cpp
+  src/core/AssimpOgreUtility.cpp
+
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
 )
@@ -57,6 +59,8 @@ set(HEADERS
   ${PROJECT_SOURCE_DIR}/src/Module.hpp
   ${PROJECT_SOURCE_DIR}/src/Interface.hpp
   ${PROJECT_SOURCE_DIR}/src/core/config.hpp
+  ${PROJECT_SOURCE_DIR}/src/core/AssimpLoader.hpp
+  ${PROJECT_SOURCE_DIR}/src/core/AssimpOgreUtility.hpp
 
   ${PROJECT_SOURCE_DIR}/src/UI/Client.hpp
   ${PROJECT_SOURCE_DIR}/src/UI/SceneMenu.hpp
@@ -73,11 +77,17 @@ set(STATIC_COMPILE_DEFINITIONS
 )
 
 set(LIBRARIES ${LIBRARIES}
-    OgreRTShaderSystem
-    OgreMain
+    RenderSystem_GL3PlusStatic
+    OgreGLSupportStatic
+    OgreMeshLodGeneratorStatic
+    OgreRTShaderSystemStatic
+    Codec_STBIStatic
+    OgreMainStatic
     imgui
     SDL2main
     SDL2
+    zzip
+    zlibstatic
 
     # assimp
     assimp-xnalara
@@ -94,26 +104,6 @@ if(WIN32)
         opengl32
 
         # Windows Libraries
-        stdc++
-        gcc
-        uuid
-
-        windowscodecs
-        opengl32
-        gdi32
-        comdlg32
-        oleaut32
-        imm32
-        winmm
-        winspool
-        kernel32
-        user32
-        shell32
-        ole32
-        advapi32
-        ws2_32
-        mingw32
-        rpcrt4
     )
 elseif(UNIX)
     set(LIBRARIES ${LIBRARIES}
@@ -122,15 +112,6 @@ elseif(UNIX)
         GL
 
         # Unix Libraries
-        stdc++
-        gcc
-        uuid
-
-        pthread
-        glib-2.0
-        gthread-2.0
-        dl
-        m
     )
 endif()
 
@@ -138,17 +119,19 @@ endif()
 set(SHARED_LINK_LIBRARIES ${LIBRARIES})
 set(STATIC_LINK_LIBRARIES ${LIBRARIES})
 
+link_directories(${LINK_DIRECTORIES})
+
 # Set up library names
 if(BUILD_SHARED_LIBS)
-  set(lib_shared_name ${lib_base_name}LibShared)
-  set(lib_shared_name_decorated ${lib_shared_name}${JKQtPlotter_LIBNAME_ADDITION})
+  set(lib_shared_name ${lib_base_name}Shared)
+  set(lib_shared_name_decorated ${lib_shared_name}${LIBNAME_ADDITION})
   set(${lib_base_name}_SHARED_LIBRARY ${lib_shared_name_decorated}  CACHE STRING "name of static library for ${lib_base_name}" FORCE)
   message( STATUS "-- Building ${lib_shared_name}" )
 endif(BUILD_SHARED_LIBS)
 
 if(BUILD_STATIC_LIBS)
-  set(lib_name ${lib_base_name}Lib)
-  set(lib_name_decorated ${lib_name}${JKQtPlotter_LIBNAME_ADDITION})
+  set(lib_name ${lib_base_name})
+  set(lib_name_decorated ${lib_name}${LIBNAME_ADDITION})
   set(${lib_base_name}_STATIC_LIBRARY ${lib_name_decorated}  CACHE STRING "name of static library for ${lib_base_name}" FORCE)
   message( STATUS "-- Building ${lib_name}" )
 endif(BUILD_STATIC_LIBS)
@@ -213,7 +196,7 @@ if(BUILD_SHARED_LIBS)
     add_custom_command(TARGET ${lib_shared_name} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_shared_name}> "${RELEASE_DIR}/modules/"
+        #COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${lib_shared_name}> "${RELEASE_DIR}/modules/"
         # Make a release directory without all the cmake extras.
         # This directory can easily be archived and distributed.
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/${application_name}/"
@@ -221,9 +204,9 @@ if(BUILD_SHARED_LIBS)
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/fonts/"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/modules/"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/share/"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/ShaderCache/"
+        #COMMAND ${CMAKE_COMMAND} -E make_directory "${RELEASE_DIR}/RTShaderCache/"
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/" "${RELEASE_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/share/" "${RELEASE_DIR}/share"
+        #COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/share/" "${RELEASE_DIR}/share"
     )
 endif()
 

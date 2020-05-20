@@ -18,7 +18,7 @@ SceneMenu::SceneMenu() {}
 SceneMenu::~SceneMenu() {}
 
 bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
-                           std::shared_ptr<Ogre::RenderWindow> ogreWindow_) {
+                           Ogre::RenderWindow *ogreWindow_) {
   setupResources();
 
   try {
@@ -33,14 +33,9 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
   Ogre::SceneManager *m_sceneManager =
       ogreRoot_->createSceneManager("DefaultSceneManager", "menu");
 
-  mShaderGenerator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
-
-  bool success = initializeRTShaderSystem(m_sceneManager);
-  if (success) {
-    // Ogre::RTShader::ShaderGenerator::getSingletonPtr()->setTargetLanguage("cg");
-    Ogre::RTShader::ShaderGenerator::getSingletonPtr()->addSceneManager(
-        m_sceneManager);
-    mShaderGenerator->addSceneManager(m_sceneManager);
+  // initialize real time shader system
+  if (!initializeRTShaderSystem(m_sceneManager)) {
+    return false;
   }
 
   // createCamera()
@@ -48,13 +43,13 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
 
   mCameraNode =
       m_sceneManager->getRootSceneNode()->createChildSceneNode("Camera Node 0");
-  //mCameraNode = mCameraNode->createChildSceneNode("Camera Node");
+  // mCameraNode = mCameraNode->createChildSceneNode("Camera Node");
   mCameraNode->attachObject(mCamera);
   mCameraNode->pitch(Ogre::Degree(-45.0f));
-  //mCameraNode->setPosition(Ogre::Vector3(0, 0, 0));
+  // mCameraNode->setPosition(Ogre::Vector3(0, 0, 0));
 
-  mCameraTargetNode =
-          m_sceneManager->getRootSceneNode()->createChildSceneNode("Camera Target Node 0");
+  mCameraTargetNode = m_sceneManager->getRootSceneNode()->createChildSceneNode(
+      "Camera Target Node 0");
   mCameraTargetNode->setPosition(Ogre::Vector3(0, 0, 0));
 
   mCamera->setPosition(Ogre::Vector3(45, 20, 20));
@@ -94,147 +89,167 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
               << std::endl;
   }
 
-  std::deque<Ogre::Vector3> mWalkList;
-  mWalkList.push_back(Ogre::Vector3(550.0, 0, 50.0));
-  mWalkList.push_back(Ogre::Vector3(-150.0, 0, -200.0));
-  mWalkList.push_back(Ogre::Vector3(0, 0, 25.0));
-  mWalkList.push_back(Ogre::Vector3(550.0, 0, 50.0));
+  Ogre::Entity *ogEntity;
+  Ogre::Entity *ogEntity2;
+  try {
+      /* createEntity() will load the resource into memory
+       * if it does not exist it will throw an exception
+       * check the resource exists before creating the entity
+       */
+    ogEntity = m_sceneManager->createEntity("ogrehead.mesh");
+    Ogre::SceneNode *ogNode =
+        m_sceneManager->getRootSceneNode()->createChildSceneNode(
+            Ogre::Vector3(22, 14, 0));
+    ogNode->attachObject(ogEntity);
+    ogNode->setScale(0.2, 0.2, 0.2);
 
-  Ogre::Entity *ent;
-  Ogre::SceneNode *node;
+    ogEntity2 = m_sceneManager->createEntity("ogrehead.mesh");
+    Ogre::SceneNode *ogNode2 =
+        m_sceneManager->getRootSceneNode()->createChildSceneNode(
+            Ogre::Vector3(-8, 15, 0));
+    ogNode2->attachObject(ogEntity2);
+    ogNode2->setScale(0.2, 0.2, 0.2);
+  } catch (Ogre::Exception e) {
+    std::cout << "ground load exception: " << e.what() << std::endl;
+  }
 
-  /*ent = m_sceneManager->createEntity("knot.mesh");
-  ent->setMaterialName("Examples/KnotTexture");
-  node = m_sceneManager->getRootSceneNode()->createChildSceneNode(
-      Ogre::Vector3(0, -10.0, 25.0));
-  node->attachObject(ent);
-  node->setScale(0.1, 0.1, 0.1);*/
+  //! [pointlight]
+  Ogre::Light *pointLight = m_sceneManager->createLight("PointLight");
+  pointLight->setType(Ogre::Light::LT_POINT);
+  //! [pointlight]
 
-  // mCamera->setPosition(0, 0, 50);
-  // mCamera->pitch(Ogre::Degree(-30.0));
-  // mCamera->yaw(Ogre::Degree(-15.0));
+  //! [pointlightcolor]
+  pointLight->setDiffuseColour(0.3, 0.3, 0.3);
+  pointLight->setSpecularColour(0.3, 0.3, 0.3);
+  //! [pointlightcolor]
 
-  // Ogre::AnimationState *mAnimationState = mEntity->getAnimationState("Idle");
-  // mAnimationState->setLoop(true);
-  // mAnimationState->setEnabled(true);
+  //! [pointlightpos]
+  Ogre::SceneNode *pointLightNode =
+      m_sceneManager->getRootSceneNode()->createChildSceneNode();
+  pointLightNode->attachObject(pointLight);
+  pointLightNode->setPosition(Ogre::Vector3(0, 25, 25));
+  //! [pointlightpos]
+  return true;
 }
 
 bool SceneMenu::initializeRTShaderSystem(Ogre::SceneManager *sceneMgr) {
-  if (Ogre::RTShader::ShaderGenerator::initialize()) {
-    Ogre::RTShader::ShaderGenerator *m_shaderGenerator =
-        Ogre::RTShader::ShaderGenerator::getSingletonPtr();
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
+  if (!Ogre::RTShader::ShaderGenerator::initialize())
+    return false;
 
-    m_shaderGenerator->addSceneManager(sceneMgr);
+  Ogre::RTShader::ShaderGenerator *m_shaderGenerator =
+      Ogre::RTShader::ShaderGenerator::getSingletonPtr();
+  m_shaderGenerator->addSceneManager(sceneMgr);
 
 #if OGRE_PLATFORM != OGRE_PLATFORM_ANDROID &&                                  \
     OGRE_PLATFORM != OGRE_PLATFORM_NACL &&                                     \
     OGRE_PLATFORM != OGRE_PLATFORM_WINRT
-    // Setup core libraries and shader cache path.
-    /*Ogre::StringVector groupVector =
-    Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
-    Ogre::StringVector::iterator itGroup = groupVector.begin();
-    Ogre::StringVector::iterator itGroupEnd = groupVector.end();
-    Ogre::String shaderCoreLibsPath;
-    Ogre::String shaderCachePath;
+  // Setup core libraries and shader cache path.
+  /*Ogre::StringVector groupVector =
+  Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
+  Ogre::StringVector::iterator itGroup = groupVector.begin();
+  Ogre::StringVector::iterator itGroupEnd = groupVector.end();
+  Ogre::String shaderCoreLibsPath;
+  Ogre::String shaderCachePath;
 
-    for (; itGroup != itGroupEnd; ++itGroup)
-    {
-        Ogre::ResourceGroupManager::LocationList resLocationsList =
-    Ogre::ResourceGroupManager::
-                                                    getSingleton().getResourceLocationList(*itGroup);
-        Ogre::ResourceGroupManager::LocationList::iterator it =
-    resLocationsList.begin(); Ogre::ResourceGroupManager::LocationList::iterator
-    itEnd = resLocationsList.end(); bool coreLibsFound = false;
-
-        // Try to find the location of the core shader lib functions and use it
-        // as shader cache path as well - this will reduce the number of
-    generated files
-        // when running from different directories.
-        for (; it != itEnd; ++it)
-        {
-            if ((*it)->archive->getName().find("RTShaderLib") !=
-    Ogre::String::npos)
-            {
-                shaderCoreLibsPath = (*it)->archive->getName() + "/cache/";
-                shaderCachePath = shaderCoreLibsPath;
-                coreLibsFound = true;
-                break;
-            }
-        }
-        // Core libs path found in the current group.
-        if (coreLibsFound)
-            break;
-    }
-
-    // Core shader libs not found -> shader generating will fail.
-    if (shaderCoreLibsPath.empty())
-        return false;*/
-
-    Ogre::StringVector groupVector =
-        Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
-    Ogre::StringVector::iterator itGroup = groupVector.begin();
-    Ogre::StringVector::iterator enGroup = groupVector.end();
-
-    bool coreLibsFound = false;
-    while (itGroup != enGroup && !coreLibsFound) {
+  for (; itGroup != itGroupEnd; ++itGroup)
+  {
       Ogre::ResourceGroupManager::LocationList resLocationsList =
-          Ogre::ResourceGroupManager::getSingleton().getResourceLocationList(
-              *itGroup);
-      Ogre::ResourceGroupManager::LocationList::iterator itor =
-          resLocationsList.begin();
-      Ogre::ResourceGroupManager::LocationList::iterator end =
-          resLocationsList.end();
+  Ogre::ResourceGroupManager::
+                                                  getSingleton().getResourceLocationList(*itGroup);
+      Ogre::ResourceGroupManager::LocationList::iterator it =
+  resLocationsList.begin(); Ogre::ResourceGroupManager::LocationList::iterator
+  itEnd = resLocationsList.end(); bool coreLibsFound = false;
 
       // Try to find the location of the core shader lib functions and use it
-      // as shader cache path as well - this will reduce the number of generated
-      // files when running from different directories.
-      while (itor != end && !coreLibsFound) {
-        if (itor->archive->getName().find("RTShaderLib") != Ogre::String::npos)
-          coreLibsFound = true;
-        ++itor;
+      // as shader cache path as well - this will reduce the number of
+  generated files
+      // when running from different directories.
+      for (; it != itEnd; ++it)
+      {
+          if ((*it)->archive->getName().find("RTShaderLib") !=
+  Ogre::String::npos)
+          {
+              shaderCoreLibsPath = (*it)->archive->getName() + "/cache/";
+              shaderCachePath = shaderCoreLibsPath;
+              coreLibsFound = true;
+              break;
+          }
       }
+      // Core libs path found in the current group.
+      if (coreLibsFound)
+          break;
+  }
 
-      ++itGroup;
+  // Core shader libs not found -> shader generating will fail.
+  if (shaderCoreLibsPath.empty())
+      return false;*/
+
+  Ogre::StringVector groupVector =
+      Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
+  Ogre::StringVector::iterator itGroup = groupVector.begin();
+  Ogre::StringVector::iterator enGroup = groupVector.end();
+
+  bool coreLibsFound = false;
+  while (itGroup != enGroup && !coreLibsFound) {
+    Ogre::ResourceGroupManager::LocationList resLocationsList =
+        Ogre::ResourceGroupManager::getSingleton().getResourceLocationList(
+            *itGroup);
+    Ogre::ResourceGroupManager::LocationList::iterator itor =
+        resLocationsList.begin();
+    Ogre::ResourceGroupManager::LocationList::iterator end =
+        resLocationsList.end();
+
+    // Try to find the location of the core shader lib functions and use it
+    // as shader cache path as well - this will reduce the number of generated
+    // files when running from different directories.
+    while (itor != end && !coreLibsFound) {
+      if (itor->archive->getName().find("RTShaderLib") != Ogre::String::npos)
+        coreLibsFound = true;
+      ++itor;
     }
 
-    if (!coreLibsFound) {
-      Ogre::RTShader::ShaderGenerator::destroy();
-      return false;
-    }
+    ++itGroup;
+  }
 
-    std::string path = "RTShaderCache/";
-    boost::filesystem::path dir(path);
-    if (boost::filesystem::create_directory(dir)) {
-      std::cout << "Directory Created: " << dir << std::endl;
-    }
+  if (!coreLibsFound) {
+    Ogre::RTShader::ShaderGenerator::destroy();
+    return false;
+  }
+
+  std::string path = "RTShaderCache/";
+  boost::filesystem::path dir(path);
+  if (boost::filesystem::create_directory(dir)) {
+    std::cout << "Directory Created: " << dir << std::endl;
+  }
 
 #ifdef _RTSS_WRITE_SHADERS_TO_DISK
-    // Set shader cache path.
+  // Set shader cache path.
 #if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
-    shaderCachePath = Ogre::macCachePath();
+  shaderCachePath = Ogre::macCachePath();
 #elif OGRE_PLATFORM == OGRE_PLATFORM_APPLE
-    shaderCachePath = Ogre::macCachePath() + "/org.ogre3d.RTShaderCache";
+  shaderCachePath = Ogre::macCachePath() + "/org.ogre3d.RTShaderCache";
 #endif
-    try {
-      m_shaderGenerator->setShaderCachePath(shaderCachePath);
-    } catch (Ogre::Exception &e) {
-      e;
-      m_shaderGenerator->setShaderCachePath("");
-    }
+  try {
+    m_shaderGenerator->setShaderCachePath(shaderCachePath);
+  } catch (Ogre::Exception &e) {
+    e;
+    m_shaderGenerator->setShaderCachePath("");
+  }
 #endif
 #endif
-    // Create and register the material manager listener if it doesn't exist
-    // yet.
-    if (mMaterialMgrListener == NULL) {
-      mMaterialMgrListener =
-          new ShaderGeneratorTechniqueResolverListener(m_shaderGenerator);
-      Ogre::MaterialManager::getSingleton().addListener(mMaterialMgrListener);
-    }
+  // Create and register the material manager listener if it doesn't exist
+  // yet.
+  if (mMaterialMgrListener == NULL) {
+    mMaterialMgrListener =
+        new ShaderGeneratorTechniqueResolverListener(m_shaderGenerator);
+    Ogre::MaterialManager::getSingleton().addListener(mMaterialMgrListener);
   }
 
   Ogre::MaterialManager::getSingleton().setActiveScheme(
       Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
 
+#endif
   return true;
 }
 
@@ -242,6 +257,7 @@ bool SceneMenu::initializeRTShaderSystem(Ogre::SceneManager *sceneMgr) {
 | Finalize the RT Shader system.
 -----------------------------------------------------------------------------*/
 void SceneMenu::finalizeRTShaderSystem() {
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
   // Restore default scheme.
   Ogre::MaterialManager::getSingleton().setActiveScheme(
       Ogre::MaterialManager::DEFAULT_SCHEME_NAME);
@@ -258,13 +274,20 @@ void SceneMenu::finalizeRTShaderSystem() {
     Ogre::RTShader::ShaderGenerator::destroy();
     mShaderGenerator = NULL;
   }
+#endif
 }
 
-void SceneMenu::setupResources() {
-  Ogre::ConfigFile cf;
-  cf.load("resources.cfg");
+bool SceneMenu::setupResources() {
+  boost::filesystem::path programPath = boost::dll::program_location();
+  boost::filesystem::path resourceConfigPath =
+      programPath.parent_path() / "resources.cfg";
+  std::cout << "SceneMenu::setupResources resourceConfigPath="
+            << resourceConfigPath << std::endl;
 
-  Ogre::String secName, typeName, archName;
+  Ogre::ConfigFile cf;
+  cf.load(resourceConfigPath.string());
+
+  Ogre::String secName, typeName;
   Ogre::ConfigFile::SectionIterator secIt = cf.getSectionIterator();
 
   while (secIt.hasMoreElements()) {
@@ -274,11 +297,16 @@ void SceneMenu::setupResources() {
 
     for (setIt = settings->begin(); setIt != settings->end(); ++setIt) {
       typeName = setIt->first;
-      archName = setIt->second;
+      // make paths relative to the executable
+      boost::filesystem::path resourceDirPath =
+          programPath.parent_path() / setIt->second;
+      std::cout << "SceneMenu::setupResources archName=" << resourceDirPath
+                << std::endl;
       Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-          archName, typeName, secName);
+          resourceDirPath.string(), typeName, secName);
     }
   }
+  return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -357,12 +385,12 @@ void SceneMenu::rotateCamera(int x, int y) {
   Ogre::Real dist =
       (mCamera->getPosition() - mNode->_getDerivedPosition()).length();
 
-  //mCamera->setPosition(mNode->_getDerivedPosition());
+  // mCamera->setPosition(mNode->_getDerivedPosition());
 
-  //mCamera->yaw(Ogre::Degree(x * 0.25f));
-  //mCamera->pitch(Ogre::Degree(y * 0.25f));
+  // mCamera->yaw(Ogre::Degree(x * 0.25f));
+  // mCamera->pitch(Ogre::Degree(y * 0.25f));
 
-  //mCamera->moveRelative(Ogre::Vector3(0, 0, dist));
+  // mCamera->moveRelative(Ogre::Vector3(0, 0, dist));
 
   mCameraNode->yaw(Ogre::Degree(-x * 0.4f), Ogre::Node::TS_PARENT);
   mCameraNode->pitch(Ogre::Degree(-y * 0.4f));
@@ -377,8 +405,9 @@ void SceneMenu::rotateCamera(int x, int y) {
 //-----------------------------------------------------------------------------
 void SceneMenu::zoomInCamera(Ogre::Real wheelDelta) {
   Ogre::Real dist =
-      (mCamera->getPosition() - mCameraTargetNode->_getDerivedPosition()).length();
-  mCamera->moveRelative(Ogre::Vector3(0, 0, -wheelDelta * 0.004f * dist));
+      (mCamera->getPosition() - mCameraTargetNode->_getDerivedPosition())
+          .length();
+  mCamera->moveRelative(Ogre::Vector3(0, 0, -wheelDelta * 0.018f * dist));
 }
 
 //-----------------------------------------------------------------------------
@@ -417,6 +446,7 @@ void SceneMenu::slideCamera(int x, int z) {
   }
 }
 
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
 ShaderGeneratorTechniqueResolverListener::
     ShaderGeneratorTechniqueResolverListener(
         Ogre::RTShader::ShaderGenerator *pShaderGenerator) {
@@ -469,5 +499,6 @@ Ogre::Technique *ShaderGeneratorTechniqueResolverListener::handleSchemeNotFound(
 
   return generatedTech;
 }
+#endif
 
 } // namespace CSO

@@ -29,7 +29,7 @@
 /* Crazy Sentences Online 1.0
  * License: MIT
  */
-#include <CrazySentencesOnlineClient/Module.hpp>
+#include <Module.hpp>
 
 int main(int argc, char *argv[]) {
   CSO::ModuleExport CsoClientModuleExport;
@@ -110,7 +110,9 @@ int main(int argc, char *argv[]) {
     client->handleEventFromSdl(&e);
 
     // Render
-    client->render();
+    if(!client->render()){
+        client->exit();
+    }
 
     // Update the surface
     SDL_GL_SwapWindow(window);
