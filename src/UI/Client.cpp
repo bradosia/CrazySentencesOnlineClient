@@ -25,9 +25,6 @@
 #include <RenderSystems/GL3Plus/OgreGL3PlusPlugin.h>
 #include <RenderSystems/GL3Plus/OgreGLRenderSystemCommon.h>
 #endif
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-#include <RTShaderSystem/OgreRTShaderSystem.h>
-#endif
 
 /*
  * CSO = Crazy Sentences Online
@@ -112,7 +109,8 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
   // - Remember that in C/C++ if you want to include a backslash \ in a string
   // literal you need to write a double backslash \\ !
   boost::filesystem::path programPath = boost::dll::program_location();
-  std::cout << "programPath: " << programPath << std::endl;
+  std::cout << "ClientWidget::initGraphics programPath: " << programPath
+            << std::endl;
   boost::filesystem::path fontPath =
       programPath.parent_path() / "fonts/arial.ttf";
   std::cout << "fontPath: " << fontPath << std::endl;
@@ -130,6 +128,7 @@ bool ClientWidget::initGraphics(SDL_Window *window_) {
 }
 
 bool ClientWidget::initOgre() {
+
 #if CSO_OGRE_ENABLE
   // Ogre Initialize
   ogreRoot = std::make_shared<Ogre::Root>(Ogre::BLANKSTRING, Ogre::BLANKSTRING,
@@ -224,27 +223,44 @@ bool ClientWidget::initOgre() {
 
   renderWindow->setVisible(true);
 
+  // chooseSceneManager
+  Ogre::SceneManager *m_sceneManager =
+      ogreRoot->createSceneManager("DefaultSceneManager", "menu");
+
   boost::filesystem::path programPath = boost::dll::program_location();
 #if CSO_OGRE_REAL_TIME_SHADER_ENABLE
   // Shortly after initialising Ogre::Root
-  Ogre::RTShader::ShaderGenerator::initialize();
-  Ogre::RTShader::ShaderGenerator *mShaderGenerator =
-      Ogre::RTShader::ShaderGenerator::getSingletonPtr();
-  boost::filesystem::path shaderPath =
-      programPath.parent_path() / "RTShaderCache";
-  mShaderGenerator->setShaderCachePath(shaderPath.string());
+  rtShader = std::make_shared<RTShader>();
+  // initialize real time shader system
+  if (!rtShader->initialize(m_sceneManager)) {
+    std::cout << "ClientWidget::initOgre RTShader initialize FAIL" << std::endl;
+    return false;
+  }
 #endif
 
-#if CSO_SCENE_MENU_ENABLE
-  // Select scene
-  menuScene = std::make_shared<SceneMenu>();
-  menuScene->initialize(ogreRoot, renderWindow);
-#endif
+  // set up resources
+  setupResources();
+
+  try {
+    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
+  } catch (std::exception e) {
+    std::cout << e.what() << std::endl;
+    // Some material or may be even an unrelated scripts crashed the engine.
+    // Load the model plain simple, no materials. Only skeleton and mesh.
+  }
+
 #endif
   return true;
 }
 
 bool ClientWidget::render() {
+  if (renderDelayFrameCount == 60) {
+#if CSO_SCENE_MENU_ENABLE
+    // Select scene
+    menuScene = std::make_shared<SceneMenu>();
+    menuScene->initialize(ogreRoot, renderWindow);
+#endif
+  }
   ImGuiIO &io = ImGui::GetIO();
 
   // Start the Dear ImGui frame
@@ -330,6 +346,22 @@ bool ClientWidget::render() {
    * the requested material is missing or when a new material is created) and
    * BaseWhiteNoLighting (same as BaseWhite but with the light turned off).
    */
+  /* BUG 50% of the time
+   *
+   * ClientWidget::render() Exception: InvalidStateException: RenderSystem does
+   * not support FixedFunction, but technique of 'ch_attacker_11_01.png' has no
+   * Vertex Shader. Use the RTSS or write custom shaders. in
+   * SceneManager::_setPass at
+   * C:/source/ogre-1.12.6/OgreMain/src/OgreSceneManager.cpp (line 895)
+   *
+   * NORMALLY:
+   *
+   * ShaderGeneratorTechniqueResolverListener::handleSchemeNotFound, schemeName:
+   * ShaderGeneratorDefaultScheme, Material: ch_attacker_11_01.png TP1
+   */
+  for (Ogre::Technique *tech : Ogre::Material::Techniques()) {
+    std::cout << "Ogre::Technique: " << tech->getName() << std::endl;
+  }
   try {
     ogreRoot->renderOneFrame();
   } catch (Ogre::Exception e) {
@@ -343,6 +375,9 @@ bool ClientWidget::render() {
 
   // Render imgui after
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+  // increment frames for delays
+  renderDelayFrameCount++;
   return true;
 }
 
@@ -452,7 +487,10 @@ bool ClientWidget::resizeOgre() {
   return true;
 }
 
-bool ClientWidget::exit() { *mainLoopFlag = true; }
+bool ClientWidget::exit() {
+  *mainLoopFlag = true;
+  return true;
+}
 
 void ClientWidget::setMainLoopFlag(bool *mainLoopFlag_) {
   mainLoopFlag = mainLoopFlag_;
@@ -625,6 +663,40 @@ bool ClientWidget::ShowExampleMenuFile() {
   if (ImGui::MenuItem("Checked", NULL, true)) {
   }
   if (ImGui::MenuItem("Quit", "Alt+F4")) {
+  }
+  return true;
+}
+
+bool ClientWidget::setupResources() {
+  boost::filesystem::path programPath = boost::dll::program_location();
+  boost::filesystem::path resourceConfigPath =
+      programPath.parent_path() / "resources.cfg";
+  std::cout << "SceneMenu::setupResources resourceConfigPath="
+            << resourceConfigPath << std::endl;
+
+  Ogre::ConfigFile cf;
+  cf.load(resourceConfigPath.string());
+
+  Ogre::String secName, typeName;
+  Ogre::ConfigFile::SectionIterator secIt = cf.getSectionIterator();
+
+  // Ogre::ConfigFile::SettingsBySection;
+
+  while (secIt.hasMoreElements()) {
+    secName = secIt.peekNextKey();
+    Ogre::ConfigFile::SettingsMultiMap *settings = secIt.getNext();
+    Ogre::ConfigFile::SettingsMultiMap::iterator setIt;
+
+    for (setIt = settings->begin(); setIt != settings->end(); ++setIt) {
+      typeName = setIt->first;
+      // make paths relative to the executable
+      boost::filesystem::path resourceDirPath =
+          programPath.parent_path() / setIt->second;
+      std::cout << "SceneMenu::setupResources archName=" << resourceDirPath
+                << std::endl;
+      Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
+          resourceDirPath.string(), typeName, secName);
+    }
   }
   return true;
 }

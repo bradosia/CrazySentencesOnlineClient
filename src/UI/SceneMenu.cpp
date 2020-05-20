@@ -6,6 +6,10 @@
  * @brief A game for ESL students to learn and have fun!
  */
 
+// c++17
+#include <fstream>
+#include <iostream>
+
 // Local Project
 #include "SceneMenu.hpp"
 
@@ -19,24 +23,9 @@ SceneMenu::~SceneMenu() {}
 
 bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
                            Ogre::RenderWindow *ogreWindow_) {
-  setupResources();
+  std::cout << "SceneMenu::initialize" << std::endl;
 
-  try {
-    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
-  } catch (std::exception e) {
-    std::cout << e.what() << std::endl;
-    // Some material or may be even an unrelated scripts crashed the engine.
-    // Load the model plain simple, no materials. Only skeleton and mesh.
-  }
-
-  // chooseSceneManager
-  Ogre::SceneManager *m_sceneManager =
-      ogreRoot_->createSceneManager("DefaultSceneManager", "menu");
-
-  // initialize real time shader system
-  if (!initializeRTShaderSystem(m_sceneManager)) {
-    return false;
-  }
+  Ogre::SceneManager *m_sceneManager = ogreRoot_->getSceneManager("menu");
 
   // createCamera()
   mCamera = m_sceneManager->createCamera("PlayerCam");
@@ -92,10 +81,10 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
   Ogre::Entity *ogEntity;
   Ogre::Entity *ogEntity2;
   try {
-      /* createEntity() will load the resource into memory
-       * if it does not exist it will throw an exception
-       * check the resource exists before creating the entity
-       */
+    /* createEntity() will load the resource into memory
+     * if it does not exist it will throw an exception
+     * check the resource exists before creating the entity
+     */
     ogEntity = m_sceneManager->createEntity("ogrehead.mesh");
     Ogre::SceneNode *ogNode =
         m_sceneManager->getRootSceneNode()->createChildSceneNode(
@@ -129,183 +118,6 @@ bool SceneMenu::initialize(std::shared_ptr<Ogre::Root> ogreRoot_,
   pointLightNode->attachObject(pointLight);
   pointLightNode->setPosition(Ogre::Vector3(0, 25, 25));
   //! [pointlightpos]
-  return true;
-}
-
-bool SceneMenu::initializeRTShaderSystem(Ogre::SceneManager *sceneMgr) {
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-  if (!Ogre::RTShader::ShaderGenerator::initialize())
-    return false;
-
-  Ogre::RTShader::ShaderGenerator *m_shaderGenerator =
-      Ogre::RTShader::ShaderGenerator::getSingletonPtr();
-  m_shaderGenerator->addSceneManager(sceneMgr);
-
-#if OGRE_PLATFORM != OGRE_PLATFORM_ANDROID &&                                  \
-    OGRE_PLATFORM != OGRE_PLATFORM_NACL &&                                     \
-    OGRE_PLATFORM != OGRE_PLATFORM_WINRT
-  // Setup core libraries and shader cache path.
-  /*Ogre::StringVector groupVector =
-  Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
-  Ogre::StringVector::iterator itGroup = groupVector.begin();
-  Ogre::StringVector::iterator itGroupEnd = groupVector.end();
-  Ogre::String shaderCoreLibsPath;
-  Ogre::String shaderCachePath;
-
-  for (; itGroup != itGroupEnd; ++itGroup)
-  {
-      Ogre::ResourceGroupManager::LocationList resLocationsList =
-  Ogre::ResourceGroupManager::
-                                                  getSingleton().getResourceLocationList(*itGroup);
-      Ogre::ResourceGroupManager::LocationList::iterator it =
-  resLocationsList.begin(); Ogre::ResourceGroupManager::LocationList::iterator
-  itEnd = resLocationsList.end(); bool coreLibsFound = false;
-
-      // Try to find the location of the core shader lib functions and use it
-      // as shader cache path as well - this will reduce the number of
-  generated files
-      // when running from different directories.
-      for (; it != itEnd; ++it)
-      {
-          if ((*it)->archive->getName().find("RTShaderLib") !=
-  Ogre::String::npos)
-          {
-              shaderCoreLibsPath = (*it)->archive->getName() + "/cache/";
-              shaderCachePath = shaderCoreLibsPath;
-              coreLibsFound = true;
-              break;
-          }
-      }
-      // Core libs path found in the current group.
-      if (coreLibsFound)
-          break;
-  }
-
-  // Core shader libs not found -> shader generating will fail.
-  if (shaderCoreLibsPath.empty())
-      return false;*/
-
-  Ogre::StringVector groupVector =
-      Ogre::ResourceGroupManager::getSingleton().getResourceGroups();
-  Ogre::StringVector::iterator itGroup = groupVector.begin();
-  Ogre::StringVector::iterator enGroup = groupVector.end();
-
-  bool coreLibsFound = false;
-  while (itGroup != enGroup && !coreLibsFound) {
-    Ogre::ResourceGroupManager::LocationList resLocationsList =
-        Ogre::ResourceGroupManager::getSingleton().getResourceLocationList(
-            *itGroup);
-    Ogre::ResourceGroupManager::LocationList::iterator itor =
-        resLocationsList.begin();
-    Ogre::ResourceGroupManager::LocationList::iterator end =
-        resLocationsList.end();
-
-    // Try to find the location of the core shader lib functions and use it
-    // as shader cache path as well - this will reduce the number of generated
-    // files when running from different directories.
-    while (itor != end && !coreLibsFound) {
-      if (itor->archive->getName().find("RTShaderLib") != Ogre::String::npos)
-        coreLibsFound = true;
-      ++itor;
-    }
-
-    ++itGroup;
-  }
-
-  if (!coreLibsFound) {
-    Ogre::RTShader::ShaderGenerator::destroy();
-    return false;
-  }
-
-  std::string path = "RTShaderCache/";
-  boost::filesystem::path dir(path);
-  if (boost::filesystem::create_directory(dir)) {
-    std::cout << "Directory Created: " << dir << std::endl;
-  }
-
-#ifdef _RTSS_WRITE_SHADERS_TO_DISK
-  // Set shader cache path.
-#if OGRE_PLATFORM == OGRE_PLATFORM_APPLE_IOS
-  shaderCachePath = Ogre::macCachePath();
-#elif OGRE_PLATFORM == OGRE_PLATFORM_APPLE
-  shaderCachePath = Ogre::macCachePath() + "/org.ogre3d.RTShaderCache";
-#endif
-  try {
-    m_shaderGenerator->setShaderCachePath(shaderCachePath);
-  } catch (Ogre::Exception &e) {
-    e;
-    m_shaderGenerator->setShaderCachePath("");
-  }
-#endif
-#endif
-  // Create and register the material manager listener if it doesn't exist
-  // yet.
-  if (mMaterialMgrListener == NULL) {
-    mMaterialMgrListener =
-        new ShaderGeneratorTechniqueResolverListener(m_shaderGenerator);
-    Ogre::MaterialManager::getSingleton().addListener(mMaterialMgrListener);
-  }
-
-  Ogre::MaterialManager::getSingleton().setActiveScheme(
-      Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
-
-#endif
-  return true;
-}
-
-/*-----------------------------------------------------------------------------
-| Finalize the RT Shader system.
------------------------------------------------------------------------------*/
-void SceneMenu::finalizeRTShaderSystem() {
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-  // Restore default scheme.
-  Ogre::MaterialManager::getSingleton().setActiveScheme(
-      Ogre::MaterialManager::DEFAULT_SCHEME_NAME);
-
-  // Unregister the material manager listener.
-  if (mMaterialMgrListener != NULL) {
-    Ogre::MaterialManager::getSingleton().removeListener(mMaterialMgrListener);
-    delete mMaterialMgrListener;
-    mMaterialMgrListener = NULL;
-  }
-
-  // Finalize RTShader system.
-  if (mShaderGenerator != NULL) {
-    Ogre::RTShader::ShaderGenerator::destroy();
-    mShaderGenerator = NULL;
-  }
-#endif
-}
-
-bool SceneMenu::setupResources() {
-  boost::filesystem::path programPath = boost::dll::program_location();
-  boost::filesystem::path resourceConfigPath =
-      programPath.parent_path() / "resources.cfg";
-  std::cout << "SceneMenu::setupResources resourceConfigPath="
-            << resourceConfigPath << std::endl;
-
-  Ogre::ConfigFile cf;
-  cf.load(resourceConfigPath.string());
-
-  Ogre::String secName, typeName;
-  Ogre::ConfigFile::SectionIterator secIt = cf.getSectionIterator();
-
-  while (secIt.hasMoreElements()) {
-    secName = secIt.peekNextKey();
-    Ogre::ConfigFile::SettingsMultiMap *settings = secIt.getNext();
-    Ogre::ConfigFile::SettingsMultiMap::iterator setIt;
-
-    for (setIt = settings->begin(); setIt != settings->end(); ++setIt) {
-      typeName = setIt->first;
-      // make paths relative to the executable
-      boost::filesystem::path resourceDirPath =
-          programPath.parent_path() / setIt->second;
-      std::cout << "SceneMenu::setupResources archName=" << resourceDirPath
-                << std::endl;
-      Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-          resourceDirPath.string(), typeName, secName);
-    }
-  }
   return true;
 }
 
@@ -445,60 +257,5 @@ void SceneMenu::slideCamera(int x, int z) {
     mCameraNode->translate(vTrans, Ogre::Node::TS_LOCAL);
   }
 }
-
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-ShaderGeneratorTechniqueResolverListener::
-    ShaderGeneratorTechniqueResolverListener(
-        Ogre::RTShader::ShaderGenerator *pShaderGenerator) {
-  mShaderGenerator = pShaderGenerator;
-}
-
-/** This is the hook point where shader based technique will be created.
-It will be called whenever the material manager won't find appropriate technique
-that satisfy the target scheme name. If the scheme name is out target RT Shader
-System scheme name we will try to create shader generated technique for it.
-*/
-Ogre::Technique *ShaderGeneratorTechniqueResolverListener::handleSchemeNotFound(
-    unsigned short schemeIndex, const Ogre::String &schemeName,
-    Ogre::Material *originalMaterial, unsigned short lodIndex,
-    const Ogre::Renderable *rend) {
-  std::cout << "ShaderGeneratorTechniqueResolverListener::handleSchemeNotFound"
-            << ", schemeName: " << schemeName.c_str()
-            << ", Material: " << originalMaterial->getName().c_str()
-            << std::endl;
-  Ogre::Technique *generatedTech = NULL;
-
-  // Case this is the default shader generator scheme.
-  if (schemeName == Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME) {
-    bool techniqueCreated;
-
-    std::cout << "TP1" << std::endl;
-
-    // Create shader generated technique for this material.
-    techniqueCreated = mShaderGenerator->createShaderBasedTechnique(
-        *originalMaterial, Ogre::MaterialManager::DEFAULT_SCHEME_NAME,
-        schemeName);
-    // Case technique registration succeeded.
-    if (techniqueCreated) {
-      // Force creating the shaders for the generated technique.
-      mShaderGenerator->validateMaterial(schemeName,
-                                         originalMaterial->getName());
-      // Grab the generated technique.
-      Ogre::Material::TechniqueIterator itTech =
-          originalMaterial->getTechniqueIterator();
-      while (itTech.hasMoreElements()) {
-        Ogre::Technique *curTech = itTech.getNext();
-
-        if (curTech->getSchemeName() == schemeName) {
-          generatedTech = curTech;
-          break;
-        }
-      }
-    }
-  }
-
-  return generatedTech;
-}
-#endif
 
 } // namespace CSO

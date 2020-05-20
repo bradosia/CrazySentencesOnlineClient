@@ -53,6 +53,7 @@ set(SOURCES
 
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
+  src/UI/RTShader.cpp
 )
 
 set(HEADERS
@@ -64,6 +65,7 @@ set(HEADERS
 
   ${PROJECT_SOURCE_DIR}/src/UI/Client.hpp
   ${PROJECT_SOURCE_DIR}/src/UI/SceneMenu.hpp
+  ${PROJECT_SOURCE_DIR}/src/UI/RTShader.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS

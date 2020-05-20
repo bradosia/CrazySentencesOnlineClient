@@ -13,9 +13,7 @@
 #include "../core/config.hpp"
 
 // c++17
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
@@ -53,25 +51,6 @@
  */
 namespace CSO {
 
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-class ShaderGeneratorTechniqueResolverListener
-    : public Ogre::MaterialManager::Listener {
-public:
-  ShaderGeneratorTechniqueResolverListener(
-      Ogre::RTShader::ShaderGenerator *pShaderGenerator);
-
-  virtual Ogre::Technique *
-  handleSchemeNotFound(unsigned short schemeIndex,
-                       const Ogre::String &schemeName,
-                       Ogre::Material *originalMaterial,
-                       unsigned short lodIndex, const Ogre::Renderable *rend);
-
-protected:
-  Ogre::RTShader::ShaderGenerator
-      *mShaderGenerator; // The shader generator instance.
-};
-#endif
-
 class SceneMenu {
 private:
 public:
@@ -79,12 +58,9 @@ public:
   ~SceneMenu();
 
   bool initialize(std::shared_ptr<Ogre::Root>, Ogre::RenderWindow *);
-  void finalizeRTShaderSystem();
-  bool initializeRTShaderSystem(Ogre::SceneManager *sceneMgr);
   /* An issue with OGRE is it uses paths relative to the calling directory
    * instead of relative to the program executable.
    */
-  bool setupResources();
   void defaultCamera();
   void originCamera();
   void centerMeshCamera();
@@ -95,12 +71,7 @@ public:
 
 private:
   std::shared_ptr<Ogre::Root> ogreRoot;
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-  // The shader generator instance.
-  Ogre::RTShader::ShaderGenerator *mShaderGenerator;
-  // Shader generator material manager listener.
-  ShaderGeneratorTechniqueResolverListener *mMaterialMgrListener;
-#endif
+
   Ogre::Entity *mMeshEntity;
   Ogre::Camera *mCamera;
   Ogre::SceneNode *mCameraNode;

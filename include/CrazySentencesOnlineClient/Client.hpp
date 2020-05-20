@@ -48,6 +48,9 @@
 #if CSO_SCENE_MENU_ENABLE
 #include "SceneMenu.hpp"
 #endif
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
+#include "RTShader.hpp"
+#endif
 
 /*
  * CSO = Crazy Sentences Online
@@ -80,6 +83,7 @@ public:
 
   bool initOgre();
   bool resizeOgre();
+  bool setupResources();
 
   ImFont *fontArialTitle;
   ImFont *fontArialText;
@@ -93,6 +97,7 @@ private:
    */
   SDL_Window *window;
   unsigned int windowWidth, windowHeight;
+  unsigned int renderDelayFrameCount = 0;
   bool *mainLoopFlag;
   bool show_demo_window, show_another_window, m_wasLeftPressed,
       m_wasRightPressed, m_wasMiddlePressed;
@@ -100,11 +105,14 @@ private:
 // OGRE
 #if CSO_OGRE_ENABLE
   std::shared_ptr<Ogre::Root> ogreRoot;
-  Ogre::RenderWindow* renderWindow;
+  Ogre::RenderWindow *renderWindow;
+#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
+  std::shared_ptr<RTShader> rtShader;
 #endif
 // SCENE
 #if CSO_SCENE_MENU_ENABLE
   std::shared_ptr<SceneMenu> menuScene;
+#endif
 #endif
   // Our state
   ImVec4 clear_color;
