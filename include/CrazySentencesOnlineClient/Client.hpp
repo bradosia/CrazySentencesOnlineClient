@@ -48,9 +48,7 @@
 #if CSO_SCENE_MENU_ENABLE
 #include "SceneMenu.hpp"
 #endif
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-#include "RTShader.hpp"
-#endif
+#include "OgreApplication.hpp"
 
 /*
  * CSO = Crazy Sentences Online
@@ -83,7 +81,6 @@ public:
 
   bool initOgre();
   bool resizeOgre();
-  bool setupResources();
 
   ImFont *fontArialTitle;
   ImFont *fontArialText;
@@ -106,9 +103,7 @@ private:
 #if CSO_OGRE_ENABLE
   std::shared_ptr<Ogre::Root> ogreRoot;
   Ogre::RenderWindow *renderWindow;
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-  std::shared_ptr<RTShader> rtShader;
-#endif
+  std::shared_ptr<OgreApplication> ogreApp;
 // SCENE
 #if CSO_SCENE_MENU_ENABLE
   std::shared_ptr<SceneMenu> menuScene;

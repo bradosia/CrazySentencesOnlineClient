@@ -6,7 +6,7 @@ project(${lib_base_name} VERSION 1.0.0 LANGUAGES CXX)
 set(RELEASE_DIR "${CMAKE_BINARY_DIR}/${lib_base_name}/")
 
 # Configurable Options
-OPTION(BUILD_SHARED_LIBS "Build shared libraries" ON)
+OPTION(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 OPTION(BUILD_STATIC_LIBS "Build static libraries" ON)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -53,7 +53,8 @@ set(SOURCES
 
   src/UI/Client.cpp
   src/UI/SceneMenu.cpp
-  src/UI/RTShader.cpp
+  src/UI/SGTechniqueResolverListener.cpp
+  src/UI/OgreApplication.cpp
 )
 
 set(HEADERS
@@ -65,7 +66,8 @@ set(HEADERS
 
   ${PROJECT_SOURCE_DIR}/src/UI/Client.hpp
   ${PROJECT_SOURCE_DIR}/src/UI/SceneMenu.hpp
-  ${PROJECT_SOURCE_DIR}/src/UI/RTShader.hpp
+  ${PROJECT_SOURCE_DIR}/src/UI/SGTechniqueResolverListener.hpp
+  ${PROJECT_SOURCE_DIR}/src/UI/OgreApplication.hpp
 )
 
 set(SHARED_COMPILE_DEFINITIONS

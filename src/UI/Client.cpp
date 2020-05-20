@@ -164,7 +164,7 @@ bool ClientWidget::initOgre() {
   }
 
   if (rs == nullptr) {
-#if HOCR_EDIT_MODULE_MAIN_WIDGET_INIT_GRAPHICS_DEBUG
+#if CSO_OGRE_DEBUG_RENDER_SYSTEM
     std::cout << "ClientWidget::initGraphics ERROR RenderSystem is not found"
               << std::endl;
 #endif
@@ -227,40 +227,22 @@ bool ClientWidget::initOgre() {
   Ogre::SceneManager *m_sceneManager =
       ogreRoot->createSceneManager("DefaultSceneManager", "menu");
 
-  boost::filesystem::path programPath = boost::dll::program_location();
-#if CSO_OGRE_REAL_TIME_SHADER_ENABLE
-  // Shortly after initialising Ogre::Root
-  rtShader = std::make_shared<RTShader>();
-  // initialize real time shader system
-  if (!rtShader->initialize(m_sceneManager)) {
-    std::cout << "ClientWidget::initOgre RTShader initialize FAIL" << std::endl;
-    return false;
-  }
+  ogreApp = std::make_shared<OgreApplication>();
+  ogreApp->setup();
+  ogreApp->setRTSSWriteShadersToDisk(true);
+
+#if CSO_SCENE_MENU_ENABLE
+  // Select scene
+  menuScene = std::make_shared<SceneMenu>();
+  menuScene->initialize(ogreRoot, renderWindow);
 #endif
 
-  // set up resources
-  setupResources();
-
-  try {
-    Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
-  } catch (std::exception e) {
-    std::cout << e.what() << std::endl;
-    // Some material or may be even an unrelated scripts crashed the engine.
-    // Load the model plain simple, no materials. Only skeleton and mesh.
-  }
-
+  ogreApp->addSceneManagerToRTShader(m_sceneManager);
 #endif
   return true;
 }
 
 bool ClientWidget::render() {
-  if (renderDelayFrameCount == 60) {
-#if CSO_SCENE_MENU_ENABLE
-    // Select scene
-    menuScene = std::make_shared<SceneMenu>();
-    menuScene->initialize(ogreRoot, renderWindow);
-#endif
-  }
   ImGuiIO &io = ImGui::GetIO();
 
   // Start the Dear ImGui frame
@@ -359,9 +341,6 @@ bool ClientWidget::render() {
    * ShaderGeneratorTechniqueResolverListener::handleSchemeNotFound, schemeName:
    * ShaderGeneratorDefaultScheme, Material: ch_attacker_11_01.png TP1
    */
-  for (Ogre::Technique *tech : Ogre::Material::Techniques()) {
-    std::cout << "Ogre::Technique: " << tech->getName() << std::endl;
-  }
   try {
     ogreRoot->renderOneFrame();
   } catch (Ogre::Exception e) {
@@ -376,7 +355,7 @@ bool ClientWidget::render() {
   // Render imgui after
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-  // increment frames for delays
+  // increment frames for delays UNUSED CURRENTLY
   renderDelayFrameCount++;
   return true;
 }
@@ -663,40 +642,6 @@ bool ClientWidget::ShowExampleMenuFile() {
   if (ImGui::MenuItem("Checked", NULL, true)) {
   }
   if (ImGui::MenuItem("Quit", "Alt+F4")) {
-  }
-  return true;
-}
-
-bool ClientWidget::setupResources() {
-  boost::filesystem::path programPath = boost::dll::program_location();
-  boost::filesystem::path resourceConfigPath =
-      programPath.parent_path() / "resources.cfg";
-  std::cout << "SceneMenu::setupResources resourceConfigPath="
-            << resourceConfigPath << std::endl;
-
-  Ogre::ConfigFile cf;
-  cf.load(resourceConfigPath.string());
-
-  Ogre::String secName, typeName;
-  Ogre::ConfigFile::SectionIterator secIt = cf.getSectionIterator();
-
-  // Ogre::ConfigFile::SettingsBySection;
-
-  while (secIt.hasMoreElements()) {
-    secName = secIt.peekNextKey();
-    Ogre::ConfigFile::SettingsMultiMap *settings = secIt.getNext();
-    Ogre::ConfigFile::SettingsMultiMap::iterator setIt;
-
-    for (setIt = settings->begin(); setIt != settings->end(); ++setIt) {
-      typeName = setIt->first;
-      // make paths relative to the executable
-      boost::filesystem::path resourceDirPath =
-          programPath.parent_path() / setIt->second;
-      std::cout << "SceneMenu::setupResources archName=" << resourceDirPath
-                << std::endl;
-      Ogre::ResourceGroupManager::getSingleton().addResourceLocation(
-          resourceDirPath.string(), typeName, secName);
-    }
   }
   return true;
 }
