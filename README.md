@@ -24,7 +24,7 @@ Libraries:
 pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-ogre3d
 ```
 
-Ogre3D 1.12.2
+Ogre3D 1.12.2 from source
 
 ```shell
 cmake -G "MSYS Makefiles" -DOGRE_STATIC=ON -DRELEASE=ON -DOGRE_BUILD_COMPONENT_BITES=OFF -DOGRE_BUILD_RENDERSYSTEM_D3D11=OFF -DOGRE_BUILD_RENDERSYSTEM_D3D9=OFF -DCMAKE_BUILD_TYPE=MinSizeRel --config release ..
