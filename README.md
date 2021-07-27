@@ -21,8 +21,7 @@ pacman -Rns cmake
 ```
 Libraries:
 ```shell
-pacman -S mingw-w64-x86_64-SDL2
-pacman -S mingw-w64-x86_64-ogre3d
+pacman -S mingw-w64-x86_64-SDL2 mingw-w64-x86_64-ogre3d
 ```
 
 Ogre3D 1.12.2
