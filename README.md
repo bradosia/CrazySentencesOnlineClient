@@ -11,8 +11,17 @@ A game for ESL students to learn and have fun!
 
 ## windows
 
+Install MSYS2<BR>
+Then, install GCC, cmake, git and dependencies. Confirmed working with Windows 10 as of 07/27/2021.
 ```shell
-pacman -S mingw-w64-x86_64-toolchain
+pacman -Syu
+pacman -S mingw-w64-x86_64-toolchain git make mingw-w64-x86_64-cmake
+pacman -Rns cmake
+# restart MSYS2 so that we use the mingw cmake
+pacman -S mingw-w64-x86_64-boost mingw-w64-x86_64-sqlite3
+```
+Libraries:
+```shell
 pacman -S mingw-w64-x86_64-SDL2
 pacman -S mingw-w64-x86_64-ogre3d
 ```
