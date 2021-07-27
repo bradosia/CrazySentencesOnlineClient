@@ -12,6 +12,7 @@ A game for ESL students to learn and have fun!
 ## windows
 
 ```shell
+pacman -S mingw-w64-x86_64-toolchain
 pacman -S mingw-w64-x86_64-SDL2
 pacman -S mingw-w64-x86_64-ogre3d
 ```
