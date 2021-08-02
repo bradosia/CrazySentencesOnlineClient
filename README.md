@@ -1,68 +1,35 @@
-# Crazy Sentences Online
-A game for ESL students to learn and have fun!
+# Bookfiler™ Project Manager
+A decentralized project management system for real estate management and accounting.
+
+# Features
+* Super fast whole-drive file search.
+* Robust no-lag handling of displaying directories with millions of files.
+* Super fast start-up.
+* JSON tree viewer module.
+* File OCR module.
 
 # Dependencies
-* Boost 1.72.0
-* SDL 2.0.12
-* ogre3d 1.12.2
-* Dear ImGui 1.75
+* QT 5.13.2
+* boost 1.72.0
+* rapidjson v1.1 (2016-8-25)
+* SQLite 3.31.1
 
-# Build
+# Installation
 
-## windows
-
-Install MSYS2<BR>
-Then, install GCC, cmake, git and dependencies. Confirmed working with Windows 10 as of 07/27/2021.
-```shell
-pacman -Syu
-pacman -S mingw-w64-x86_64-toolchain git make mingw-w64-x86_64-cmake
-pacman -Rns cmake
-# restart MSYS2 so that we use the mingw cmake
-```
-Libraries:
-```shell
-pacman -S mingw-w64-x86_64-zlib mingw-w64-x86_64-glew mingw-w64-x86_64-SDL2 mingw-w64-x86_64-assimp mingw-w64-x86_64-ogre3d
-```
-
-Ogre3D 1.12.2 from source (optional)
+## Mingw64
 
 ```shell
-cmake -G "MSYS Makefiles" -DOGRE_STATIC=ON -DRELEASE=ON -DOGRE_BUILD_COMPONENT_BITES=OFF -DOGRE_BUILD_RENDERSYSTEM_D3D11=OFF -DOGRE_BUILD_RENDERSYSTEM_D3D9=OFF -DCMAKE_BUILD_TYPE=MinSizeRel --config release ..
-```
-  
-Build:
-```shell
-git clone https://github.com/bradosia/CrazySentencesOnlineClient
-cd CrazySentencesOnlineClient
+pacman -S mingw-w64-x86_64-libgit2 mingw-w64-x86_64-qt5
 mkdir build
 cd build
 cmake -G "MSYS Makefiles" ../
-make
 ```
 
-## linux
+# Development & Design Architecture
 
-download and install OGRE3D 1.12 manually.
+## Module System
+![Module System](https://github.com/bradosia/BookFiler-File-Manager/blob/master/UML/module_system_D20200324.png)
 
-```shell
-sudo apt-get install libxinerama-dev
-sudo apt-get install libxrandr-dev
-sudo apt-get install libxcursor-dev
-sudo apt-get install libxi-dev
-sudo apt-get install libx11-dev
-sudo apt-get install libxaw7-dev
-sudo apt-get install libglew-dev
-sudo apt-get install libtesseract-dev libleptonica-dev liblept5
-```
+Bookfiler™ File Manager has been designed with reusable widgets and unit testing. The modular widgets can be included in other project's personal use or commercial use application depending on the module licensing. Modules are implemented using `boost::dll` as the module loader. QT also includes a plugin manager, but boost::dll is used instead to reduce dependency on QT in case another User Interface library is used or considered.
 
-modules/libhocrEditModuleLibShared.so.1.0.0 exception fix:
-```shell
-sudo cp /usr/lib/x86_64-linux-gnu/libzzip-0.so.13.0.62 /usr/lib/x86_64-linux-gnu/libzzip.so.13
-```
-
-## Notes
-
-```shell
-_ZNSt6thread15_M_start_threadESt10unique_ptrINS_6_StateESt14default_deleteIS1_EEPFvvE
-```
-caused by a missing libstdc++-6.dll
+The advantage of runtime loaded DLLs is that the module dependencies do not need to be linked to the main program. The disadvantage is that if modules use the same dependencies then the linker can't optimize the file size.

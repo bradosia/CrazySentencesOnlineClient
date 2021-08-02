@@ -1,8 +1,5 @@
-build/
-lib/
+build
 CMakeLists.txt.user
-third_party/ogre
-
 
 # Prerequisites
 *.d
