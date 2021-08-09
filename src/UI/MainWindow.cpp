@@ -21,14 +21,15 @@ int callbackTest(
   return 0;
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
-  /* UI Setup
-   */
-  ui = std::make_unique<Ui::main>();
-  ui->setupUi(this);
-  this->setObjectName("MainWindow");
+MainWindow::~MainWindow(){};
 
-  /* Load modules in another thread and let them appear as they load.
+MainWindow::MainWindow(boost::program_options::variables_map vm) {
+  /* In a QT app we would first setup the UI here,
+   * but the UI is generated from the UI module so we need to first load the
+   * modules
+   */
+
+  /* LOAD MODULES in another thread and let them appear as they load.
    * This will give the illusion to the user that the load time is fast.
    * A splash screen or loading bar will make the program start up seem slow.
    *

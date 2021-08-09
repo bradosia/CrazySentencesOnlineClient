@@ -7,17 +7,17 @@ cmake_minimum_required(VERSION 3.4)
 # ExternalProject populates content from the other project at build time. 
 include(FetchContent)
 
-FetchContent_Declare(
-    CrazySentencesOnlineModuleRenderFetch
-    GIT_REPOSITORY "https://github.com/bradosia/CrazySentencesOnline-Module-Render.git"
-    SOURCE_DIR "${PROJECT_SOURCE_DIR}/modules/CrazySentencesOnline-Module-Render"
-)
-FetchContent_MakeAvailable(CrazySentencesOnlineModuleRenderFetch)
+#FetchContent_Declare(
+#    CrazySentencesOnlineModuleRenderFetch
+#    GIT_REPOSITORY "https://github.com/bradosia/CrazySentencesOnline-Module-Render.git"
+#    SOURCE_DIR "${PROJECT_SOURCE_DIR}/modules/CrazySentencesOnline-Module-Render"
+#)
+#FetchContent_MakeAvailable(CrazySentencesOnlineModuleRenderFetch)
 
-FetchContent_Declare(
-    CrazySentencesOnlineModuleSocketsFetch
-    GIT_REPOSITORY "https://github.com/bradosia/CrazySentencesOnline-Module-Sockets.git"
-    SOURCE_DIR "${PROJECT_SOURCE_DIR}/modules/CrazySentencesOnline-Module-Sockets"
-)
-FetchContent_MakeAvailable(CrazySentencesOnlineModuleSocketsFetch)
+#FetchContent_Declare(
+#    CrazySentencesOnlineModuleSocketsFetch
+#    GIT_REPOSITORY "https://github.com/bradosia/CrazySentencesOnline-Module-Sockets.git"
+#    SOURCE_DIR "${PROJECT_SOURCE_DIR}/modules/CrazySentencesOnline-Module-Sockets"
+#)
+#FetchContent_MakeAvailable(CrazySentencesOnlineModuleSocketsFetch)
 

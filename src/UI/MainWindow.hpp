@@ -17,6 +17,11 @@
 // C++
 #include <memory>
 
+/* boost 1.76.0
+ * License: Boost Software License (similar to BSD and MIT)
+ */
+#include <boost/program_options.hpp>
+
 // bradosia libraries 1.0
 #include <ModuleManager/ModuleManager.hpp>
 #include <SettingsManager/SettingsManager.hpp>
@@ -26,19 +31,12 @@
 #include <BookFiler-Module-Filesystem-Database/Interface.hpp>
 
 // Local Project
-#include "RenderWidget.hpp"
-#include "ui_main.hpp"
+//#include "RenderWidget.hpp"
 
-class MainWindow : public QMainWindow {
-  Q_OBJECT
-
+class MainWindow {
 public:
-  MainWindow(QWidget *parent = nullptr);
-  ~MainWindow() {
-    for (auto widgetPtr : centralQWidgetPtrs) {
-      widgetPtr->setParent(nullptr);
-    }
-  };
+  MainWindow(boost::program_options::variables_map);
+  ~MainWindow();
   void loadModules();
   int FSDB_ModuleLoaded(
       std::shared_ptr<bookfiler::FileSystemDatabaseInterface>);
@@ -49,14 +47,11 @@ public:
 private:
   unsigned int modulesLoadedNum;
   unsigned int modulesLoadedTotalNum;
-  std::unique_ptr<Ui::main> ui;
   std::shared_ptr<bookfiler::FileSystemDatabaseInterface> FSDB_Module;
   std::shared_ptr<bookfiler::FileTreePaneInterface> fileTreePaneModule;
-  std::vector<std::shared_ptr<QWidget>> centralQWidgetPtrs;
   std::shared_ptr<bradosia::ModuleManager> moduleManagerPtr;
   std::shared_ptr<bradosia::SettingsManager> settingsManagerPtr;
   std::shared_ptr<bookfiler::FileTreePaneWidget> fileTreePaneWidgetList,
       fileTreePaneWidgetMain;
-  std::shared_ptr<RenderWidget> renderWidgetList, renderWidgetMain;
 };
 #endif // MAIN_WINDOW_H

@@ -14,18 +14,14 @@
 // c++
 #include <memory>
 
-/* QT 5.13.2-1
- * License: LGPLv3
- */
-#include <QApplication>
-
 // MainWindow
 #include "MainWindow.hpp"
 
-class Application final : public QApplication {
+class Application {
 public:
   Application(int &argc, char **argv);
   ~Application();
+  int exec();
 
 private:
   std::unique_ptr<MainWindow> mainWindow;
